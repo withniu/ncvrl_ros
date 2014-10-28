@@ -12,8 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  cmake_modules
 )
-
+find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -87,7 +88,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES viewer
 #  CATKIN_DEPENDS cv_bridge geometry_msgs image_transport nav_msgs roscpp rospy std_msgs
-#  DEPENDS system_lib
+#  DEPENDS eigen opencv
 )
 
 ###########
@@ -99,6 +100,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 ## Declare a cpp library
@@ -107,16 +109,16 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-# add_executable(viewer_node src/viewer_node.cpp)
+add_executable(viewer src/main.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(viewer_node viewer_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(viewer_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(viewer
+   ${catkin_LIBRARIES}
+ )
 
 #############
 ## Install ##
