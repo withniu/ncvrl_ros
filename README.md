@@ -1,4 +1,4 @@
-nvcrl_ros
+ncvrl_ros
 =========
 
-ROS parts for NVCRL
+ROS parts for NCVRL
