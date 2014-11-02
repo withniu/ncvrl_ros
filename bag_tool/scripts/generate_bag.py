@@ -12,7 +12,7 @@ from nav_msgs.msg import Path
 import rosbag
 import csv
 
-bag = rosbag.Bag('test.bag', 'w')
+bag = rosbag.Bag('sfm_pose.bag', 'w')
 
 stamp_ref = 1413303981.13749303
 index_ref = 70
