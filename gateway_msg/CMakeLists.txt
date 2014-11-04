@@ -10,7 +10,14 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  cv_bridge
+  image_transport
+  rqt_reconfigure
 )
+
+find_package(cmake_modules REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -94,9 +101,11 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
+include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
+  ${OpenCV_INCLUDE_DIR}
 )
 
 ## Declare a cpp library
@@ -105,16 +114,18 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-# add_executable(gateway_msg_node src/gateway_msg_node.cpp)
+add_executable(ptam_metric_node src/ptam_metric_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(gateway_msg_node gateway_msg_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(gateway_msg_node
-#   ${catkin_LIBRARIES}
-# )
+link_directories(/home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib)
+target_link_libraries(ptam_metric_node
+   ${catkin_LIBRARIES}
+   ${OpenCV_LIBS}
+   /home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libapriltags.a)
 
 #############
 ## Install ##

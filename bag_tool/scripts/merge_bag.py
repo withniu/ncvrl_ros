@@ -2,8 +2,8 @@
 
 import rosbag
 
-bags = ['imu.bag', 'sfm_pose.bag', 'images.bag']
-#bags = ['imu.bag', 'sfm_pose.bag']
+#bags = ['imu.bag', 'sfm_pose.bag', 'images.bag']
+bags = ['imu.bag', 'sfm_pose.bag']
 
 with rosbag.Bag('merged.bag', 'w') as outbag:
     for bag in bags:
