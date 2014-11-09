@@ -16,7 +16,7 @@ for image in images:
     nsecs = int((stamp - int(stamp)) * 1000000000)
 
     image.replace('image' + m.group(1), str(secs) + str(nsecs)) 
-    print image
+    print 'image' + m.group(1)
     
 
 

@@ -1,7 +1,7 @@
 <launch>
   <!-- Camera /-->
   <node name="cam0" pkg="usb_cam" type="usb_cam_node" output="screen">
-    <param name="video_device" type="string" value="/dev/video0"/>
+    <param name="video_device" type="string" value="/dev/video1"/>
     <param name="pixel_format" type="string" value="yuyv"/>
     <param name="framerate" type="int" value="30"/>
     <param name="image_width" type="int" value="640"/>
