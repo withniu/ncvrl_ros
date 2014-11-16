@@ -108,7 +108,7 @@ public:
 
       float z_sfm = pose_.pose.pose.position.z;
       float z_metric = m_c2w(2, 3);
-      float scale = z_metric / z_sfm;
+      float scale = z_sfm / z_metric;
 
       std::cout << "id = " << detections[i].id << std::endl;
 //      std::cout << translation << std::endl;
