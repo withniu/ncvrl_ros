@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
   rqt_reconfigure
+  ethz_apriltag2
 )
 
 find_package(cmake_modules REQUIRED)
@@ -115,6 +116,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(ptam_metric_node src/ptam_metric_node.cpp)
+add_executable(localize_tag_node src/localize_tag_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -127,6 +129,9 @@ target_link_libraries(ptam_metric_node
    ${OpenCV_LIBS}
    /home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libapriltags.a)
 
+target_link_libraries(localize_tag_node
+   ${catkin_LIBRARIES}
+   ${OpenCV_LIBS})
 #############
 ## Install ##
 #############

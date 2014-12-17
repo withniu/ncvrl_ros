@@ -1,5 +1,5 @@
-#ifndef _PTAM_METRIC_H_
-#define _PTAM_METRIC_H_
+#ifndef _LOCALIZE_TAG_H_
+#define _LOCALIZE_TAG_H_
 
 #include <iostream>
 
@@ -13,14 +13,11 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-//#include "AprilTags/TagDetector.h"
-//#include "AprilTags/Tag36h11.h"
-
 #include "apriltags/TagDetector.h"
 #include "apriltags/Tag36h11.h"
 #include "apriltags/Tag16h5.h"
 
-class PtamMetric
+class LocalizeTag
 {
 protected:
   cv::Mat img_;                                   //< Image buffer
@@ -29,11 +26,16 @@ protected:
   AprilTags::TagDetector *tag_detector_;
   AprilTags::TagCodes tag_codes_;
 
+  bool vis_;
+
   float tag_size_;
   float fx_, fy_, cx_, cy_;
   size_t width_, height_;
+
+  ros::Publisher *pub_;
+
 public:
-  PtamMetric() 
+  LocalizeTag() 
   : tag_detector_   (NULL)
   , tag_codes_      (AprilTags::tagCodes16h5)
   , tag_size_       (0.166)   // Meter
@@ -43,10 +45,11 @@ public:
   , cy_             (231.78081)
   , width_          (640)
   , height_         (480)
+  , vis_            (true)
+  , pub_            (NULL)
   {
-    cv::namedWindow("raw");
   }
-  virtual ~PtamMetric()
+  virtual ~LocalizeTag()
   {}
 
   void init()
@@ -55,14 +58,24 @@ public:
     cv::namedWindow("view");
   }
 
+  void registerPublisher(ros::Publisher *pub)
+  {
+    pub_ = pub;
+  }
+
   void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   {
     // Deep copy to image buffer
     cv_bridge::toCvShare(msg, "bgr8")->image.copyTo(img_);
     detect();
-    cv::imshow("raw", img_);
-    cv::waitKey(1);
+    pub_->publish(pose_);
   }
+
+//  void publishMessage(ros::Publisher *pub_message)
+//  {
+//    node_example::node_example_data msg;
+//    pub_message->publish(msg);
+//  }
 
   void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
   {
@@ -111,22 +124,17 @@ public:
       Eigen::Affine3d tf_c2w = tf_w2c.inverse();
       Eigen::Matrix4d m_c2w = tf_c2w.matrix();
 
-      float z_sfm = pose_.pose.pose.position.z;
-      float z_metric = m_c2w(2, 3);
-      float scale = z_sfm / z_metric;
-
       std::cout << "id = " << detections[i].id << std::endl;
 //      std::cout << translation << std::endl;
 //      std::cout << rotation << std::endl;
       std::cout << tf_c2w.matrix() << std::endl;
-      std::cout << "z_sfm = " << z_sfm
-                << "z_metric = " << z_metric
-                << "scale = " << scale << std::endl;
       
     }  
-
-    cv::imshow("view", img);
-    cv::waitKey(1);
+    if (vis_)
+    {
+      cv::imshow("view", img);
+      cv::waitKey(1);
+    }
 
   }
  
