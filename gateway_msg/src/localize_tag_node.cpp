@@ -15,8 +15,8 @@ int main(int argc, char **argv)
   image_transport::Subscriber sub_img = it.subscribe("image", 1, &LocalizeTag::imageCallback, node);
 
   ros::Subscriber sub_cmd = n.subscribe("cmd", 1, &LocalizeTag::cmdCallback, node);
-  ros::Subscriber sub_pose = n.subscribe("pose", 1, &LocalizeTag::poseCallback, node);
-  ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseWithCovarianceStamped>("pose_tag", 1);
+//  ros::Subscriber sub_pose = n.subscribe("pose", 1, &LocalizeTag::poseCallback, node);
+  ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseStamped>("pose_tag", 1);
   
   node->registerPublisher(&pub_pose);
   

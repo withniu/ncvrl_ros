@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   rqt_reconfigure
   ethz_apriltag2
+  tf
 )
 
 find_package(cmake_modules REQUIRED)

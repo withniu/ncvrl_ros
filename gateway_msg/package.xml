@@ -44,6 +44,7 @@
   <build_depend>rqt_reconfigure</build_depend>
   <build_depend>cmake_modules</build_depend>
   <build_depend>ethz_apriltag2</build_depend>
+  <build_depend>tf</build_depend>
 
   <run_depend>geometry_msgs</run_depend>
   <run_depend>visualization_msgs</run_depend>
@@ -56,6 +57,7 @@
   <run_depend>rqt_reconfigure</run_depend>
   <run_depend>cmake_modules</run_depend> 
   <run_depend>ethz_apriltag2</run_depend> 
+  <run_depend>tf</run_depend> 
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

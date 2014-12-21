@@ -7,7 +7,8 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/String.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
+//#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -21,7 +22,7 @@ class LocalizeTag
 {
 protected:
   cv::Mat img_;                                   //< Image buffer
-  geometry_msgs::PoseWithCovarianceStamped pose_; //< Pose buffer  
+//  geometry_msgs::PoseWithCovarianceStamped pose_; //< Pose buffer  
 
   AprilTags::TagDetector *tag_detector_;
   AprilTags::TagCodes tag_codes_;
@@ -38,12 +39,12 @@ public:
   LocalizeTag() 
   : tag_detector_   (NULL)
   , tag_codes_      (AprilTags::tagCodes16h5)
-  , tag_size_       (0.166)   // Meter
-  , fx_             (585.738365)
-  , fy_             (584.053885)
-  , cx_             (297.772449)
-  , cy_             (231.78081)
-  , width_          (640)
+  , tag_size_       (0.077)   // Meter
+  , fx_             (366.6719)
+  , fy_             (367.3712)
+  , cx_             (353.4861)
+  , cy_             (247.5548)
+  , width_          (752)
   , height_         (480)
   , vis_            (true)
   , pub_            (NULL)
@@ -54,7 +55,7 @@ public:
 
   void init()
   {
-    tag_detector_ = new AprilTags::TagDetector(tag_codes_);
+    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
     cv::namedWindow("view");
   }
 
@@ -68,7 +69,7 @@ public:
     // Deep copy to image buffer
     cv_bridge::toCvShare(msg, "bgr8")->image.copyTo(img_);
     detect();
-    pub_->publish(pose_);
+ //   pub_->publish(pose_);
   }
 
 //  void publishMessage(ros::Publisher *pub_message)
@@ -77,10 +78,10 @@ public:
 //    pub_message->publish(msg);
 //  }
 
-  void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
-  {
-    pose_ = *msg;
-  }
+//  void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
+//  {
+//    pose_ = *msg;
+//  }
 
   void cmdCallback(const std_msgs::String::ConstPtr &msg)
   {
@@ -107,32 +108,42 @@ public:
   void detect()
   {
     cv::Mat img, img_gray;
-    img_.copyTo(img);
-    cv::cvtColor(img, img_gray, CV_BGR2GRAY);
+    
+    cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.3158, 0.1439, -1.5443e-04, 5.1411e-04, -0.0397);
+
+    cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
+    cv::Mat img_undist;
+
+    cv::undistort(img_, img_undist, camera_matrix, dist_coeffs);
+
+    cv::cvtColor(img_undist, img_gray, CV_BGR2GRAY);
     std::vector<AprilTags::TagDetection> detections = tag_detector_->extractTags(img_gray);
     for (size_t i = 0; i < detections.size(); ++i)
     {
-      detections[i].draw(img);
+      if (detections[i].id >= 0 && detections[i].id < 8)
+      {
+      	detections[i].draw(img_gray);
       
 //      Eigen::Vector3d translation;
 //      Eigen::Matrix3d rotation;
 //      detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
   
-      Eigen::Matrix4d m_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
-      Eigen::Affine3d tf_w2c;
-      tf_w2c.matrix() = m_w2c;
-      Eigen::Affine3d tf_c2w = tf_w2c.inverse();
-      Eigen::Matrix4d m_c2w = tf_c2w.matrix();
+      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
+	geometry_msgs::PoseStamped pose;
+        std_msgs::Header header;
+        pose.pose.position.x = tf_w2c(0, 3);
+        pose.pose.position.y = tf_w2c(1, 3);
+        pose.pose.position.z = tf_w2c(2, 3);
+      
+        pose.header.frame_id = "cam";
 
-      std::cout << "id = " << detections[i].id << std::endl;
-//      std::cout << translation << std::endl;
-//      std::cout << rotation << std::endl;
-      std::cout << tf_c2w.matrix() << std::endl;
+	pub_->publish(pose);
+      }
       
     }  
     if (vis_)
     {
-      cv::imshow("view", img);
+      cv::imshow("view", img_gray);
       cv::waitKey(1);
     }
 
