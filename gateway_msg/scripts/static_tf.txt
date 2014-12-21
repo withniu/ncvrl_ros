@@ -1,0 +1,1 @@
+rosrun tf static_transform_publisher 0.137 -0.138 -0.032 -0.25613171 0.65800991 -0.6563139 0.26584126 quad cam 1000

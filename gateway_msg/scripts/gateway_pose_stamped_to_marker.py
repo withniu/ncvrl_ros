@@ -1,25 +1,46 @@
 #!/usr/bin/env python
 
 import rospy
-from std_msgs.msg import String
-from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
+from visualization_msgs.msg import Marker
 
 
-pub = rospy.Publisher('/gateway/pose_stamped', PoseStamped, queue_size = 10)
+pub = rospy.Publisher('/gateway/marker', Marker, queue_size = 10)
 
 
 def callback(data):
-    p = PoseStamped()
-    p.header = data.header
-    p.pose = data.pose.pose
+    
+
+    m = Marker()
+    m.header.frame_id = data.header.frame_id
+#    m.header.stamp = rospy.get_time()
+    m.ns = 'ncvrl'
+    m.id = 0
+    m.type = 2
+#    m.pose.position.x = 0
+#    m.pose.position.y = 0
+#    m.pose.position.z = 0
+#    m.pose.orientation.x = 0
+#    m.pose.orientation.y = 0
+#    m.pose.orientation.z = 0
+#    m.pose.orientation.w = 1.0
+
+    m.pose = data.pose
+
+    m.scale.x = 0.2         
+    m.color.a = 1.0
+    m.color.r = 0.0
+    m.color.g = 0.0
+    m.color.b = 1.0
+
+
 
     pub.publish(p);
 
 def gateway():
 
-    rospy.init_node('gateway_odometry_to_pose_stamped', anonymous=True)
-    rospy.Subscriber("/odom", Odometry, callback)
+    rospy.init_node('gateway_pose_stamped_to_marker', anonymous=True)
+    rospy.Subscriber("/pose_tag", PoseStamped, callback)
 
     rospy.spin()
         
