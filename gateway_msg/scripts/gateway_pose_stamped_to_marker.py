@@ -28,14 +28,16 @@ def callback(data):
     m.pose = data.pose
 
     m.scale.x = 0.2         
-    m.color.a = 1.0
+    m.scale.y = 0.2         
+    m.scale.z = 0.2         
+    m.color.a = 0.5
     m.color.r = 0.0
-    m.color.g = 0.0
-    m.color.b = 1.0
+    m.color.g = 1.0
+    m.color.b = 0.0
 
 
 
-    pub.publish(p);
+    pub.publish(m);
 
 def gateway():
 

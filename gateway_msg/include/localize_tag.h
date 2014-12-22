@@ -134,7 +134,11 @@ public:
         pose.pose.position.x = tf_w2c(0, 3);
         pose.pose.position.y = tf_w2c(1, 3);
         pose.pose.position.z = tf_w2c(2, 3);
-      
+        pose.pose.orientation.x = 0;
+        pose.pose.orientation.y = 0;
+        pose.pose.orientation.z = 0;
+        pose.pose.orientation.w = 1.0;
+
         pose.header.frame_id = "cam";
 
 	pub_->publish(pose);
