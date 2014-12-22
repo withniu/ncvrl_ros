@@ -1,0 +1,18 @@
+<launch>
+
+  <!-- Dynamic tf from odometry -->
+
+  <!-- Static tf from cam to robot -->
+
+  <!-- Static tf from mv_xxxxxx to cam -->
+
+  <!-- Head arrow marker -->
+  
+  <!-- Ground circle marker -->
+
+  <!-- rviz -->
+
+  <!-- Tag localization -->
+
+
+</launch>
