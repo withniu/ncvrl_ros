@@ -34,6 +34,7 @@ protected:
   size_t width_, height_;
 
   ros::Publisher *pub_;
+  image_transport::Publisher *pub_image_;
 
 public:
   LocalizeTag() 
@@ -46,8 +47,9 @@ public:
   , cy_             (247.5548)
   , width_          (752)
   , height_         (480)
-  , vis_            (true)
+  , vis_            (false)
   , pub_            (NULL)
+  , pub_image_      (NULL)
   {
   }
   virtual ~LocalizeTag()
@@ -59,16 +61,66 @@ public:
     cv::namedWindow("view");
   }
 
-  void registerPublisher(ros::Publisher *pub)
+  void registerPublisher(ros::Publisher *pub, image_transport::Publisher *pub_image)
   {
     pub_ = pub;
+    pub_image_ = pub_image;
   }
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   {
     // Deep copy to image buffer
-    cv_bridge::toCvShare(msg, "bgr8")->image.copyTo(img_);
-    detect();
+//    cv_bridge::toCvShare(msg, "bgr8")->image.copyTo(img_);
+
+    cv::Mat img, img_gray;
+    
+//    cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.3158, 0.1439, -1.5443e-04, 5.1411e-04, -0.0397);
+
+    cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
+//    cv::Mat img_undist;
+
+//    cv::undistort(img_, img_undist, camera_matrix, dist_coeffs);
+
+    cv::Mat img_msg = cv_bridge::toCvShare(msg, "bgr8")->image;
+    cv::cvtColor(img_msg, img_gray, CV_BGR2GRAY);
+    cv::cvtColor(img_gray, img, CV_GRAY2BGR);
+
+    std::vector<AprilTags::TagDetection> detections = tag_detector_->extractTags(img_gray);
+    for (size_t i = 0; i < detections.size(); ++i)
+    {
+      if (detections[i].id >= 0 && detections[i].id < 8)
+      {
+      	detections[i].draw(img);
+      
+//      Eigen::Vector3d translation;
+//      Eigen::Matrix3d rotation;
+//      detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
+  
+      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
+	geometry_msgs::PoseStamped pose;
+        std_msgs::Header header;
+        pose.pose.position.x = tf_w2c(0, 3);
+        pose.pose.position.y = tf_w2c(1, 3);
+        pose.pose.position.z = tf_w2c(2, 3);
+        pose.pose.orientation.x = 0;
+        pose.pose.orientation.y = 0;
+        pose.pose.orientation.z = 0;
+        pose.pose.orientation.w = 1.0;
+
+        pose.header.frame_id = "cam";
+
+	pub_->publish(pose);
+      }
+      
+    }  
+    if (vis_)
+    {
+      cv::imshow("view", img_gray);
+      cv::waitKey(1);
+    }
+    sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img).toImageMsg();
+    pub_image_->publish(msg_tag);
+ //   detect();
  //   pub_->publish(pose_);
   }
 
@@ -107,50 +159,6 @@ public:
 
   void detect()
   {
-    cv::Mat img, img_gray;
-    
-    cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.3158, 0.1439, -1.5443e-04, 5.1411e-04, -0.0397);
-
-    cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
-    cv::Mat img_undist;
-
-    cv::undistort(img_, img_undist, camera_matrix, dist_coeffs);
-
-    cv::cvtColor(img_undist, img_gray, CV_BGR2GRAY);
-    std::vector<AprilTags::TagDetection> detections = tag_detector_->extractTags(img_gray);
-    for (size_t i = 0; i < detections.size(); ++i)
-    {
-      if (detections[i].id >= 0 && detections[i].id < 8)
-      {
-      	detections[i].draw(img_gray);
-      
-//      Eigen::Vector3d translation;
-//      Eigen::Matrix3d rotation;
-//      detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
-  
-      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
-	geometry_msgs::PoseStamped pose;
-        std_msgs::Header header;
-        pose.pose.position.x = tf_w2c(0, 3);
-        pose.pose.position.y = tf_w2c(1, 3);
-        pose.pose.position.z = tf_w2c(2, 3);
-        pose.pose.orientation.x = 0;
-        pose.pose.orientation.y = 0;
-        pose.pose.orientation.z = 0;
-        pose.pose.orientation.w = 1.0;
-
-        pose.header.frame_id = "cam";
-
-	pub_->publish(pose);
-      }
-      
-    }  
-    if (vis_)
-    {
-      cv::imshow("view", img_gray);
-      cv::waitKey(1);
-    }
-
   }
  
 };

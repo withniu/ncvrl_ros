@@ -1,18 +1,35 @@
 <launch>
 
+  <arg name="ns_cam" default="mv_26802491"/>
+
   <!-- Dynamic tf from odometry -->
+    <node pkg="gateway_msg" type="gateway_odometry_to_tf.py" name="odom_to_tf">
+      <remap from="odom" to="/vicon/QuadrotorPapa_odom"/>
+    </node>
+
+  <!-- Dynamic tf from pose stamed --> 
+    <node pkg="gateway_msg" type="gateway_pose_stamped_to_tf.py" name="pose_to_tf"/>
 
   <!-- Static tf from cam to robot -->
-
+    <node pkg="tf" type="static_transform_publisher" name="tf_cam_to_robot" args="0.1404 -0.13 -0.03 -0.25613171 0.65800991 -0.6563139 0.26584126 quad cam 10" />
   <!-- Static tf from mv_xxxxxx to cam -->
+    <!--node pkg="tf" type="static_transform_publisher" name="tf_mv_xxxxx_to_cam" args="0 0 0 0 0 0 1 cam mv_26802491 10" /-->
+
 
   <!-- Head arrow marker -->
-  
+    <node pkg="gateway_msg" type="gateway_pose_stamped_to_marker2d.py" name="marker_ground" />
   <!-- Ground circle marker -->
+    <node pkg="gateway_msg" type="gateway_pose_stamped_to_marker_arrow.py" name="marker_arrow" />
+
+  <!-- rectify -->
+  <node ns="$(arg ns_cam)" pkg="image_proc" type="image_proc" name="rectify" />
 
   <!-- rviz -->
 
   <!-- Tag localization -->
-
+    <node pkg="gateway_msg" type="localize_tag_node" name="localize_tag_node">
+      <remap from="image" to="/mv_26802491/image_rect" />
+      <remap from="image_tag" to="/mv_26802491/image_tag" />
+    </node>
 
 </launch>
