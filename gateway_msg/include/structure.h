@@ -4,42 +4,53 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <flann/flann.hpp>
+//#include <glog/logging.h>
+#include "image_feature.h"
 
 #define DIM_DES 128
 //#define DEBUG_MATCHING
-#include "image_feature.h"
 
-//#include <glog/logging.h>
 struct Point
 {
   double x, y, z;
   unsigned char r, g, b;
   int num_obs;
-
 };
 
 class Structure
 {
 private:
-  std::vector<cv::Point3f> points_;
+  std::vector<cv::Point3f> points_;           //< 3D metric points
   flann::Matrix<float> *database_;            //< FLANN Database
   flann::Index<flann::L2<float> > *kdtree_;   //< FLANN k-d tree
-  std::vector<cv::Mat> patches_;
+#ifdef DEBUG_MATCHING  
+  std::vector<cv::Mat> patches_;              //< Feature patches for debug
+#endif
+
 public:
+  // TODO:
   cv::Mat descriptors_;
+  
   Structure() 
   {
+#ifdef DEBUG_MATCHING  
     cv::namedWindow("patch");
+#endif
   }
+
   virtual ~Structure() {}
 
 
+  /** \brief Save points to PCD ascii format, use color (255,255,255)
+   *  \param[in] filename PCD filename
+   */
   void savePCD(const std::string &filename) const
   {
     std::ofstream ofs(filename.c_str(), std::ios::out);
@@ -58,25 +69,25 @@ public:
     for (size_t i = 0; i < points_.size(); ++i)
     {
       const cv::Point3f &pt = points_[i];
-      ofs << pt.x << ", " << pt.y << ", " << pt.z << ", " << float(255 << 16 | 255 << 8 | 255) << std::endl;
+      // Use white as default color
+      ofs << pt.x << " " << pt.y << " " << pt.z << " " << float(255 << 16 | 255 << 8 | 255) << std::endl;
     }
-
-
     ofs.close();
-  
   }
 
   /** \brief Load NVM
-   *
+   *  \param[in] filename NVM filename
    */
   void load(const std::string &filename)
   {
     std::ifstream ifs(filename.c_str(), std::ios::in);
     std::string line;
     
+    // 0. Header
     std::getline(ifs, line);    // Header
     std::getline(ifs, line);    // Blank line
 
+    // 1. Camera
     int num_cam;
     ifs >> num_cam;
     std::cout << num_cam;
@@ -85,15 +96,11 @@ public:
     for (size_t i = 0; i < num_cam; ++i)
     {
       std::getline(ifs, line);
-//      std::cout << line << std::endl;
       std::stringstream ss(line);
       ss >> filenames[i];
-     // std::cout << line << std::endl;
-
-      //fscanf(line, "%s\t%f %f %f %f %f %f %f %f %f %f", )
-    
+      //std::cout << line << std::endl;
     }
-   
+    // Sift features of each image
     std::vector<ImageFeature> imfs(num_cam);
     for (size_t i = 0; i < num_cam; ++i)
     {
@@ -103,6 +110,7 @@ public:
     
     std::getline(ifs, line);    // Blank line
     
+    // 2. Points
     int num_pts;
     ifs >> num_pts;
     std::cout << num_pts << std::endl;
@@ -113,23 +121,25 @@ public:
     double center_x = 376.0;
     double center_y = 240.0;
 
-
-    // Load similar transform
+    // Load similar transform to convert sfm frame to metric
     cv::FileStorage fs_param("param.yml", cv::FileStorage::READ);
     double s;
     cv::Mat tf;
     fs_param["tf_sfm_to_vicon"] >> tf;
-
     fs_param["scale_sfm_to_metric"] >> s;
     fs_param.release();
 
+    //std::cout << s << std::endl;
+    //std::cout << tf << std::endl;
 
-    std::cout << s << std::endl;
-    std::cout << tf << std::endl;
-
+    // Load position and descritpor for each 3D point
     descriptors_ = cv::Mat(num_pts, DIM_DES, CV_8U);
     points_.resize(num_pts);
+
+#ifdef DEBUG_MATCHING
     patches_.resize(num_pts);
+#endif
+    
     for (size_t i = 0; i < num_pts; ++i)
     {
       ifs >> x;
@@ -138,17 +148,18 @@ public:
       ifs >> r;
       ifs >> g; 
       ifs >> b;
-      // TODO: Transform to metric
+      // Transform to metric
       cv::Mat pt4 = (cv::Mat_<float>(4, 1) << x * s, y * s, z * s, 1.0);
       cv::Mat pt4_w = tf * pt4;
       
-      points_[i] = cv::Point3f(pt4_w.at<float>(0) / pt4_w.at<float>(3), pt4_w.at<float>(1) / pt4_w.at<float>(3), pt4_w.at<float>(2) / pt4_w.at<float>(3));
+      points_[i] = cv::Point3f(pt4_w.at<float>(0) / pt4_w.at<float>(3), 
+                               pt4_w.at<float>(1) / pt4_w.at<float>(3), 
+                               pt4_w.at<float>(2) / pt4_w.at<float>(3));
       int num_obs; // Number of observation
       ifs >> num_obs;
-      std::cout << i << "," << x << "," << y << "," << z << "," << r << "," << g << "," << b << "," << num_obs << std::endl;
       
+      //std::cout << i << "," << x << "," << y << "," << z << "," << r << "," << g << "," << b << "," << num_obs << std::endl;
       
-      int win = 100;
       double scale_max = 0;
       for (size_t j = 0; j < num_obs; ++j)
       {
@@ -159,13 +170,15 @@ public:
         ifs >> u;       // Location x wrt image center (not principle point)
         ifs >> v;       // Location y wrt image center (not principle point)
 //        std::cout << idx_img << "," << idx_kp << "," << u << "," << v << "," << filenames[idx_img] << std::endl;
-//        ImageFeature imf;
-//        imf.load(filenames[idx_img]);
         cv::KeyPoint kp = imfs[idx_img].getKeypoint(idx_kp);
+        
+        // Use the descriptor with largest scale
+        // TODO: More robust method
         double scale = kp.size;
         if (scale > scale_max)
         {
 #ifdef DEBUG_MATCHING
+          int win = 100;
           cv::Rect roi(0, 0, 0, 0);
           roi += cv::Point2i(kp.pt.x - 0.5 * win + 2 * win, kp.pt.y - 0.5 * win + 2 * win);
           roi += cv::Size(win, win);
@@ -173,28 +186,24 @@ public:
           imfs[idx_img].img_.copyTo(img_draw);
           cv::circle(img_draw, kp.pt, 10, cv::Scalar(0, 0, 255), 2);
           cv::copyMakeBorder(img_draw, img_border, 2 * win, 2 * win, 2 * win, 2 * win, cv::BORDER_CONSTANT, 0);
-//          std::cout << roi << std::endl;
           cv::Mat patch(img_border, roi);
-//          cv::imshow("patch", patch);
-//          cv::waitKey(0);
           patch.copyTo(patches_[i]);
 #endif          
           imfs[idx_img].getDescriptorRow(idx_kp, i, descriptors_);
           scale_max = scale;
-
         }
-          // TODO: Computer average
 //        imf.draw(idx_kp, cv::Point2f(center_x + u, center_y + v));  // Draw target SIFT feature
 //        imf.draw(-1, cv::Point2f(cx + u, cy + v));    // Draw all SIFT features
 
       }
-//      std::getline(ifs, line);    // Blank line
-//      std::cout << line << std::endl;
     }
     ifs.close();
 
+#ifdef DEBUG_MATCHING
     cv::imwrite("des.png", descriptors_);
+#endif  
   }
+
   void buildDatabase()
   {
     // Database matrix
@@ -206,7 +215,6 @@ public:
     {
       for (int c = 0; c < dim_desc; ++c)
       {
-//        std::cout << float(descriptors_.at<unsigned char>(r, c)) << std::endl;
         (*database_)[r][c] = float(descriptors_.at<unsigned char>(r, c));
       }
     }
@@ -225,8 +233,6 @@ public:
     kdtree_->buildIndex();
     std::cout << "Index done." << std::endl;
   }
-
-
 
   bool localize(cv::Mat &img, 
                 const cv::Mat &query_descs,
@@ -307,12 +313,6 @@ public:
       // RANSAC PnP
       std::vector<int> indices_inlier;
       //cv::solvePnPRansac(points_3d, points_2d, camera_matrix, cv::Mat::zeros(5, 1, CV_32F), rvec, tvec, false, 30, 10.0, 300, indices_inlier, CV_EPNP);
-//      if (rvec.rows == 5)
-//      {
-//        rvec.release();
-//        cv::solvePnPRansac(points_3d, points_2d, camera_matrix, cv::noArray(), rvec, tvec, true, 30, 2.0, 500, indices_inlier, CV_ITERATIVE);
-//      }
-//      else
         cv::solvePnPRansac(points_3d, points_2d, camera_matrix, cv::noArray(), rvec, tvec, true, 20, 2.0, 100, indices_inlier, CV_ITERATIVE);
 
 #ifdef INFO_DRAW
@@ -328,7 +328,7 @@ public:
         cv::circle(img, pt2, 2, cv::Scalar(255, 0, 0), 1);
         cv::line(img, pt2, pt2_proj, cv::Scalar(255, 255, 0), 1);
         
-        //        char buffer[100];
+//        char buffer[100];
 //        sprintf(buffer, "%d", i);
 //       cv::putText(img, std::string(buffer), pt2, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 5));
       }
