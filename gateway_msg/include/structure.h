@@ -78,7 +78,7 @@ public:
   /** \brief Load NVM
    *  \param[in] filename NVM filename
    */
-  void load(const std::string &filename)
+  void load(const std::string &filename, const std::string &filename_cfg)
   {
     std::ifstream ifs(filename.c_str(), std::ios::in);
     std::string line;
@@ -100,12 +100,14 @@ public:
       ss >> filenames[i];
       //std::cout << line << std::endl;
     }
+    unsigned found = filename.find_last_of("/\\");
+    std::string path = filename.substr(0, found);
     // Sift features of each image
     std::vector<ImageFeature> imfs(num_cam);
     for (size_t i = 0; i < num_cam; ++i)
     {
-      std::cout << i << ", " << filenames[i] << std::endl;
-      imfs[i].load(filenames[i]);
+      std::cout << i << ", " << path + "/" + filenames[i] << std::endl;
+      imfs[i].load(path + "/" + filenames[i]);
     }
     
     std::getline(ifs, line);    // Blank line
@@ -122,7 +124,7 @@ public:
     double center_y = 240.0;
 
     // Load similar transform to convert sfm frame to metric
-    cv::FileStorage fs_param("param.yml", cv::FileStorage::READ);
+    cv::FileStorage fs_param(filename_cfg, cv::FileStorage::READ);
     double s;
     cv::Mat tf;
     fs_param["tf_sfm_to_vicon"] >> tf;

@@ -76,10 +76,10 @@ public:
     st_.freeDatabase();
   }
 
-  void init(const std::string &filename)
+  void init(const std::string &filename_nvm, const std::string &filename_cfg)
   {
     //cv::namedWindow("view");
-    st_.load(filename);
+    st_.load(filename_nvm, filename_cfg);
     st_.buildDatabase();
     st_.buildFlannIndex();
   }

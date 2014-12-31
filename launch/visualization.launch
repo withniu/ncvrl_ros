@@ -25,7 +25,8 @@
   <node ns="$(arg ns_cam)" pkg="image_proc" type="image_proc" name="rectify" />
 
   <!-- rviz -->
-
+    <node pkg="rviz" type="rviz" name="rviz" args="$(find gateway_msg)/cfg/vis.rviz">
+  
   <!-- Tag localization -->
     <node pkg="gateway_msg" type="localize_tag_node" name="localize_tag_node">
       <remap from="image" to="/mv_26802491/image_rect" />
@@ -33,9 +34,17 @@
     </node>
 
   <!-- Camera localization -->
-    <node pkg="gateway_msg" type="localize_cam_node" name="localize_cam_node" args="$(find gateway_msg)/data/sample117.nvm $(find gateway_msg)/cfg/param.yml">
+    <node pkg="gateway_msg" type="localize_cam_node" name="localize_cam_node" args="$(find gateway_msg)/data/sample117.nvm $(find gateway_msg)/cfg/param.yml" output="screen">
       <remap from="image_sub" to="/mv_26802491/image_rect" />
       <remap from="image_pub" to="/mv_26802491/image_sift" />
       <remap from="pose" to="/pose_sfm" />
     </node>
+
+    
+  <!-- Publish pointcloud in world frame 100Hz -->
+    <node pkg="pcl_ros" type="pcd_to_pointcloud" name="pcd_to_pointcloud" args="$(find gateway_msg)/data/structure.pcd 0.01" output="screen">
+      <!--remap from="image_sub" to="/mv_26802491/image_rect" /-->
+      <param name="frame_id" type="string" value="world" />
+    </node>
+    
 </launch>
