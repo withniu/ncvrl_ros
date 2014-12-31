@@ -68,10 +68,6 @@ public:
       return;
     }
 
-    st_.load("sample117.nvm");
-
-    st_.buildDatabase();
-    st_.buildFlannIndex();
   }
 
 
@@ -80,9 +76,12 @@ public:
     st_.freeDatabase();
   }
 
-  void init()
+  void init(const std::string &filename)
   {
-    cv::namedWindow("view");
+    //cv::namedWindow("view");
+    st_.load(filename);
+    st_.buildDatabase();
+    st_.buildFlannIndex();
   }
 
   void registerPublisher(ros::Publisher *pub, image_transport::Publisher *pub_image)

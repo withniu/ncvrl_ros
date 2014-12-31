@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 
   LocalizeCam *node = new LocalizeCam();
   
-  node->init();
+  node->init(argv[1], argv[2]);
 
 //  ImageFeature imf;
 //  imf.load("sample235/undist/1418932946898065892.jpg.undist.jpg");

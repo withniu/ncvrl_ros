@@ -32,4 +32,10 @@
       <remap from="image_tag" to="/mv_26802491/image_tag" />
     </node>
 
+  <!-- Camera localization -->
+    <node pkg="gateway_msg" type="localize_cam_node" name="localize_cam_node" args="$(find gateway_msg)/data/sample117.nvm $(find gateway_msg)/cfg/param.yml">
+      <remap from="image_sub" to="/mv_26802491/image_rect" />
+      <remap from="image_pub" to="/mv_26802491/image_sift" />
+      <remap from="pose" to="/pose_sfm" />
+    </node>
 </launch>
