@@ -62,7 +62,7 @@ public:
     // TODO:
     //tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
     tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
-    cv::namedWindow("view");
+//    cv::namedWindow("view");
   }
 
   void registerPublisher(ros::Publisher *pub, image_transport::Publisher *pub_image)
@@ -85,46 +85,65 @@ public:
 
 //    cv::undistort(img_, img_undist, camera_matrix, dist_coeffs);
 
-    cv::Mat img_msg = cv_bridge::toCvShare(msg, "bgr8")->image;
-    cv::cvtColor(img_msg, img_gray, CV_BGR2GRAY);
-    cv::cvtColor(img_gray, img, CV_GRAY2BGR);
+//    cv::Mat img_msg = cv_bridge::toCvShare(msg, "bgr8")->image;
+//    cv::cvtColor(img_msg, img_gray, CV_BGR2GRAY);
+//    cv::cvtColor(img_gray, img, CV_GRAY2BGR);
 
-    std::vector<AprilTags::TagDetection> detections = tag_detector_->extractTags(img_gray);
+    //cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "mono8");
+    cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
+    cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
+    std::vector<AprilTags::TagDetection> detections;
+    try
+    {
+//      detections = tag_detector_->extractTags(img_gray);
+    }
+    catch(const std::exception& e)
+    {
+      ROS_DEBUG("%d,%d", img_gray.rows, img_gray.cols);
+    }
+      
+    std::cout << detections.size() << std::endl;
+    geometry_msgs::PoseStamped pose;
+    pub_->publish(pose);
+    
+/*
     for (size_t i = 0; i < detections.size(); ++i)
     {
       // TODO:
       if (detections[i].id >= 0 && detections[i].id < 8 || true)
       {
-      	detections[i].draw(img);
+//      	detections[i].draw(img);
       
 //      Eigen::Vector3d translation;
 //      Eigen::Matrix3d rotation;
 //      detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
   
-      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
-	geometry_msgs::PoseStamped pose;
+//      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
+	      geometry_msgs::PoseStamped pose;
         std_msgs::Header header;
-        pose.pose.position.x = tf_w2c(0, 3);
-        pose.pose.position.y = tf_w2c(1, 3);
-        pose.pose.position.z = tf_w2c(2, 3);
-        pose.pose.orientation.x = 0;
+//        pose.pose.position.x = tf_w2c(0, 3);
+//        pose.pose.position.y = tf_w2c(1, 3);
+//        pose.pose.position.z = tf_w2c(2, 3);
+//        pose.pose.orientation.x = 0;
         pose.pose.orientation.y = 0;
         pose.pose.orientation.z = 0;
         pose.pose.orientation.w = 1.0;
 
         pose.header.frame_id = "cam";
 
-	pub_->publish(pose);
+	      pub_->publish(pose);
+        break; // Only use 1st detection
       }
       
     }  
+*/
     if (vis_)
     {
       cv::imshow("view", img_gray);
       cv::waitKey(1);
     }
-    sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img).toImageMsg();
-    pub_image_->publish(msg_tag);
+//    sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img).toImageMsg();
+//    pub_image_->publish(msg_tag);
  //   detect();
  //   pub_->publish(pose_);
   }

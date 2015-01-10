@@ -122,30 +122,29 @@ include_directories(
 ## Declare a cpp executable
 add_executable(ptam_metric_node src/ptam_metric_node.cpp)
 add_executable(localize_tag_node src/localize_tag_node.cpp)
-add_executable(localize_cam_node src/localize_cam_node.cpp)
+#add_executable(localize_cam_node src/localize_cam_node.cpp)
 add_executable(sync_image_odom src/sync_image_odom.cpp)
 #add_executable(simple_sift src/simple_sift.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(gateway_msg_node gateway_msg_generate_messages_cpp)
-add_dependencies(localize_cam_node ${PROJECT_NAME}_gencfg)
+#add_dependencies(localize_cam_node ${PROJECT_NAME}_gencfg)
 
 ## Specify libraries to link a library or executable target against
 link_directories(/home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib)
 target_link_libraries(ptam_metric_node
    ${catkin_LIBRARIES}
-   ${OpenCV_LIBS}
-   /home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libapriltags.a)
+   ${OpenCV_LIBS})
 
 target_link_libraries(localize_tag_node
    ${catkin_LIBRARIES}
    ${OpenCV_LIBS})
 
-target_link_libraries(localize_cam_node
-   ${catkin_LIBRARIES}
-   ${OpenCV_LIBS}
-   /home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libsiftgpu.so)
+ #target_link_libraries(localize_cam_node
+ #  ${catkin_LIBRARIES}
+ #   ${OpenCV_LIBS}
+ #  /home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libsiftgpu.so)
 
 target_link_libraries(sync_image_odom
    ${catkin_LIBRARIES}
