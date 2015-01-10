@@ -14,7 +14,7 @@ def handle_pose_sfm(msg):
     br.sendTransform((position.x, position.y, position.z),
                      (orientation.x, orientation.y, orientation.z, orientation.w),
                      rospy.Time.now(),
-                     "mv_26802491",
+                     "cam_sfm",
                      "world")
 
 if __name__ == '__main__':

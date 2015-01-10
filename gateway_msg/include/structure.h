@@ -315,7 +315,7 @@ public:
       // RANSAC PnP
       std::vector<int> indices_inlier;
       //cv::solvePnPRansac(points_3d, points_2d, camera_matrix, cv::Mat::zeros(5, 1, CV_32F), rvec, tvec, false, 30, 10.0, 300, indices_inlier, CV_EPNP);
-        cv::solvePnPRansac(points_3d, points_2d, camera_matrix, cv::noArray(), rvec, tvec, true, 20, 2.0, 100, indices_inlier, CV_ITERATIVE);
+        cv::solvePnPRansac(points_3d, points_2d, camera_matrix, cv::noArray(), rvec, tvec, true, 20, 10.0, 100, indices_inlier, CV_ITERATIVE);
 
 #ifdef INFO_DRAW
       std::vector<cv::Point2f> points_2d_proj;
@@ -345,7 +345,7 @@ public:
       cv::waitKey(0);
 #endif
 
-      /*      
+            
       // Optionally refine using inliers and LM
       if (indices_inlier.size() > 10)
       {
@@ -356,7 +356,7 @@ public:
           inliers_2d.push_back(points_2d[indices_inlier[i]]);
           inliers_3d.push_back(points_3d[indices_inlier[i]]);
         }
-        cv::solvePnP(inliers_3d, inliers_2d, camera_matrix, cv::Mat::zeros(5, 1, CV_32F), rvec, tvec, true, CV_ITERATIVE);
+        cv::solvePnP(inliers_3d, inliers_2d, camera_matrix, cv::Mat::zeros(5, 1, CV_32F), rvec, tvec, false, CV_ITERATIVE);
 //        cv::Rodrigues(rvec, R);
 //        hconcat(R, tvec, tf);
 //        std::cout << DEBUG_INFO << "[R|t] after refinement = " << std::endl << tf << std::endl;
@@ -367,7 +367,7 @@ public:
         std::cout <<  "Skip refinement..."<< std::endl;
       }
 //      t.getCurrentTime("4. PnP");
-*/
+
 /*
       // 5. Output
       matches.clear();

@@ -11,9 +11,12 @@
     <node pkg="gateway_msg" type="gateway_pose_stamped_to_tf.py" name="pose_to_tf"/>
 
   <!-- Static tf from cam to robot -->
-    <node pkg="tf" type="static_transform_publisher" name="tf_cam_to_robot" args="0.1404 -0.13 -0.03 -0.25613171 0.65800991 -0.6563139 0.26584126 quad cam 10" />
+    <!--node pkg="tf" type="static_transform_publisher" name="tf_cam_to_robot" args="0.1404 -0.13 -0.03 -0.25613171 0.65800991 -0.6563139 0.26584126 quad cam 10" /-->
+    <node pkg="tf" type="static_transform_publisher" name="tf_cam_to_robot" args="0.079 -0.064 -0.016 -0.25719485  0.659482   -0.65294669  0.26943444 quad cam 10" />
+
   <!-- Static tf from mv_xxxxxx to cam -->
-    <!--node pkg="tf" type="static_transform_publisher" name="tf_mv_xxxxx_to_cam" args="0 0 0 0 0 0 1 cam mv_26802491 10" /-->
+    <!--node pkg="tf" type="static_transform_publisher" name="tf_mv_xxxxx_to_cam" args="0 0 0 0 0 0 1 cam_sfm mv_26802491 10" /-->
+    <node pkg="tf" type="static_transform_publisher" name="tf_mv_xxxxx_to_cam" args="0 0 0 0 0 0 1 cam mv_26802491 10" />
 
 
   <!-- Head arrow marker -->
@@ -25,7 +28,7 @@
   <node ns="$(arg ns_cam)" pkg="image_proc" type="image_proc" name="rectify" />
 
   <!-- rviz -->
-    <node pkg="rviz" type="rviz" name="rviz" args="$(find gateway_msg)/cfg/vis.rviz">
+    <node pkg="rviz" type="rviz" name="rviz" args="$(find gateway_msg)/cfg/vis.rviz"/>
   
   <!-- Tag localization -->
     <node pkg="gateway_msg" type="localize_tag_node" name="localize_tag_node">
@@ -34,7 +37,7 @@
     </node>
 
   <!-- Camera localization -->
-    <node pkg="gateway_msg" type="localize_cam_node" name="localize_cam_node" args="$(find gateway_msg)/data/sample117.nvm $(find gateway_msg)/cfg/param.yml" output="screen">
+    <node pkg="gateway_msg" type="localize_cam_node" name="localize_cam_node" args="$(find gateway_msg)/data/sample534.nvm $(find gateway_msg)/cfg/param.yml" output="screen">
       <remap from="image_sub" to="/mv_26802491/image_rect" />
       <remap from="image_pub" to="/mv_26802491/image_sift" />
       <remap from="pose" to="/pose_sfm" />
@@ -42,7 +45,7 @@
 
     
   <!-- Publish pointcloud in world frame 100Hz -->
-    <node pkg="pcl_ros" type="pcd_to_pointcloud" name="pcd_to_pointcloud" args="$(find gateway_msg)/data/structure.pcd 0.01" output="screen">
+    <node pkg="pcl_ros" type="pcd_to_pointcloud" name="pcd_to_pointcloud" args="$(find gateway_msg)/data/structure_transformed.pcd 0.01" output="screen">
       <!--remap from="image_sub" to="/mv_26802491/image_rect" /-->
       <param name="frame_id" type="string" value="world" />
     </node>

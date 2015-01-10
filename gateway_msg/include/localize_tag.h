@@ -39,7 +39,9 @@ protected:
 public:
   LocalizeTag() 
   : tag_detector_   (NULL)
-  , tag_codes_      (AprilTags::tagCodes16h5)
+  , tag_codes_      (AprilTags::tagCodes36h11)
+    // TODO:
+//  , tag_codes_      (AprilTags::tagCodes16h5)
   , tag_size_       (0.077)   // Meter
   , fx_             (366.6719)
   , fy_             (367.3712)
@@ -57,7 +59,9 @@ public:
 
   void init()
   {
-    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
+    // TODO:
+    //tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
+    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
     cv::namedWindow("view");
   }
 
@@ -88,7 +92,8 @@ public:
     std::vector<AprilTags::TagDetection> detections = tag_detector_->extractTags(img_gray);
     for (size_t i = 0; i < detections.size(); ++i)
     {
-      if (detections[i].id >= 0 && detections[i].id < 8)
+      // TODO:
+      if (detections[i].id >= 0 && detections[i].id < 8 || true)
       {
       	detections[i].draw(img);
       

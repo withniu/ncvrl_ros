@@ -26,11 +26,11 @@ if __name__ == '__main__':
     for idx in range(0, num_cam):
       line = f.readline()
       data = line.split()
-      m = re.search('/(.*?).jpg', data[0])
-#m = re.search('(.*?).jpg', data[0])   
+      #m = re.search('/(.*?).jpg', data[0])
+      m = re.search('([0-9]+).jpg', data[0])   
       ts = m.group(0)
-      ts = ts[1:ts.rindex('.')]
-    #ts = ts[:ts.rindex('.')]
+#ts = ts[1:ts.rindex('.')]
+      ts = ts[:ts.rindex('.')]
       if abs(float(data[6])) < 30 and abs(float(data[7])) < 30 and abs(float(data[8])) < 30:
       	f_cam.write('%s, %s, %s, %s\n' % (ts, data[6], data[7], data[8]))
 	

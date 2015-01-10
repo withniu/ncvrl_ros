@@ -7,7 +7,7 @@
 
 
 nav_msgs::Odometry odom;
-tf::TransformListener listener;
+tf::TransformListener *listener_ptr;
 
 void odometryCallback(const nav_msgs::Odometry &msg)
 {
@@ -16,9 +16,14 @@ void odometryCallback(const nav_msgs::Odometry &msg)
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
+  tf::Stamped<tf::Point> pt, pt_out;
+  pt.frame_id_ = "cam";
+  pt.stamp_ = ros::Time(0);
+  pt.setData(tf::Point(0, 0, 0.1));
   tf::StampedTransform transform;
   try{
-    listener.lookupTransform("/world", "/cam", ros::Time(0), transform);
+    listener_ptr->lookupTransform("/world", "/cam", ros::Time(0), transform);
+    listener_ptr->transformPoint("world", pt, pt_out);
   }   
   catch (tf::TransformException &ex) {
     ROS_ERROR("%s",ex.what());
@@ -31,7 +36,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	    << transform.stamp_ << ", "
 	    << position.x() << ", "
 	    << position.y() << ", "
-	    << position.z() << ", " << std::endl;
+	    << position.z() << ", " 
+	    << pt_out.x() << ", "
+	    << pt_out.y() << ", "
+	    << pt_out.z()  << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -39,6 +47,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "image_listener");
   ros::NodeHandle nh;
 
+  tf::TransformListener listener;
+  listener_ptr = &listener;
   ros::Subscriber sub_cmd = nh.subscribe("odom", 1, odometryCallback);
 
   image_transport::ImageTransport it(nh);

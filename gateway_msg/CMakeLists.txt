@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   ethz_apriltag2
   tf
   nav_msgs
+  dynamic_reconfigure
 )
 
 find_package(cmake_modules REQUIRED)
@@ -81,6 +82,9 @@ find_package(OpenCV REQUIRED)
 #   DEPENDENCIES
 #   geometry_msgs#   sensor_msgs#   std_msgs
 # )
+generate_dynamic_reconfigure_options(
+  cfg/localize_cam.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -110,7 +114,6 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIR}
 )
-
 ## Declare a cpp library
 # add_library(gateway_msg
 #   src/${PROJECT_NAME}/gateway_msg.cpp
@@ -126,6 +129,7 @@ add_executable(sync_image_odom src/sync_image_odom.cpp)
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(gateway_msg_node gateway_msg_generate_messages_cpp)
+add_dependencies(localize_cam_node ${PROJECT_NAME}_gencfg)
 
 ## Specify libraries to link a library or executable target against
 link_directories(/home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib)

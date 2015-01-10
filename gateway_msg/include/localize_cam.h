@@ -192,6 +192,7 @@ public:
 */	      
      geometry_msgs::PoseStamped pose;
      std_msgs::Header header;
+     pose.header = msg->header;
      pose.pose.position.x = xyz.at<double>(0);
      pose.pose.position.y = xyz.at<double>(1);
      pose.pose.position.z = xyz.at<double>(2);
