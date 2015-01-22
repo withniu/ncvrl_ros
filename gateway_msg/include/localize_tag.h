@@ -102,11 +102,12 @@ public:
       ROS_DEBUG("%d,%d", img_gray.rows, img_gray.cols);
     }
       
-    std::cout << detections.size() << std::endl;
+    //std::cout << detections.size() << std::endl;
+    
     geometry_msgs::PoseStamped pose;
     pub_->publish(pose);
     
-/*
+
     for (size_t i = 0; i < detections.size(); ++i)
     {
       // TODO:
@@ -114,13 +115,16 @@ public:
       {
 //      	detections[i].draw(img);
       
-//      Eigen::Vector3d translation;
-//      Eigen::Matrix3d rotation;
-//      detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
+      Eigen::Vector3d translation;
+      Eigen::Matrix3d rotation;
+      detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
   
 //      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
-	      geometry_msgs::PoseStamped pose;
+
+      geometry_msgs::PoseStamped pose;
         std_msgs::Header header;
+
+        
 //        pose.pose.position.x = tf_w2c(0, 3);
 //        pose.pose.position.y = tf_w2c(1, 3);
 //        pose.pose.position.z = tf_w2c(2, 3);
