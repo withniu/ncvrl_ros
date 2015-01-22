@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   nav_msgs
   dynamic_reconfigure
+  tf2
+  tf2_ros
 )
 
 find_package(cmake_modules REQUIRED)
