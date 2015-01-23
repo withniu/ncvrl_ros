@@ -24,6 +24,7 @@ int main(int argc, char **argv)
 
   while (n.ok())
   {
+    node->localize();
     ros::spinOnce();
     r.sleep();
   }

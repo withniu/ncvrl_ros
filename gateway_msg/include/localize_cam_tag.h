@@ -25,9 +25,10 @@
 class LocalizeCamTag
 {
 protected:
-  cv::Mat img_;                                   //< Image buffer
+  cv::Mat img_;
+  cv::Mat img_gray_;  //< Image buffer
 //  geometry_msgs::PoseWithCovarianceStamped pose_; //< Pose buffer  
-
+  bool new_image_;
   AprilTags::TagDetector *tag_detector_;
   AprilTags::TagCodes tag_codes_;
 
@@ -45,15 +46,16 @@ public:
   : tag_detector_   (NULL)
   , tag_codes_      (AprilTags::tagCodes36h11)
     // TODO:
-//  , tag_codes_      (AprilTags::tagCodes16h5)
+  //, tag_codes_      (AprilTags::tagCodes16h5)
   , tag_size_       (0.077)   // Meter
   , fx_             (366.6719)
   , fy_             (367.3712)
   , cx_             (353.4861)
   , cy_             (247.5548)
-  , width_          (752)
+  , width_          (640)
   , height_         (480)
   , vis_            (false)
+  , new_image_      (false)
   , pub_            (NULL)
   , pub_image_      (NULL)
   {
@@ -64,8 +66,8 @@ public:
   void init()
   {
     // TODO:
-    //tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
-    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
+    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
+//    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
 //    cv::namedWindow("view");
   }
 
@@ -77,11 +79,21 @@ public:
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   {
+    
+    cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
+    cv::cvtColor(img_ptr->image, img_gray_, CV_BGR2GRAY);
+    new_image_ = true;
+  }
+  void localize()
+  {
+    if (new_image_ == false)
+      return;
+    new_image_ = false;
     static tf2_ros::TransformBroadcaster br;
     // Deep copy to image buffer
 //    cv_bridge::toCvShare(msg, "bgr8")->image.copyTo(img_);
 
-    cv::Mat img, img_gray;
+   // cv::Mat img, img_gray;
     
 //    cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.3158, 0.1439, -1.5443e-04, 5.1411e-04, -0.0397);
 
@@ -95,36 +107,35 @@ public:
 //    cv::cvtColor(img_gray, img, CV_GRAY2BGR);
 
     //cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "mono8");
-    cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
-    cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
     std::vector<AprilTags::TagDetection> detections;
     try
     {
-//      detections = tag_detector_->extractTags(img_gray);
+      detections = tag_detector_->extractTags(img_gray_);
     }
     catch(const std::exception& e)
     {
-      ROS_DEBUG("%d,%d", img_gray.rows, img_gray.cols);
+      ROS_DEBUG("%d,%d", img_gray_.rows, img_gray_.cols);
     }
       
-    //std::cout << detections.size() << std::endl;
+    std::cout << detections.size() << std::endl;
     
-    geometry_msgs::PoseStamped pose;
-    pub_->publish(pose);
+ //   geometry_msgs::PoseStamped pose;
+ //   pub_->publish(pose);
     
 
     for (size_t i = 0; i < detections.size(); ++i)
     {
       // TODO:
-      if (detections[i].id == 1)
+      if (detections[i].id == 0)
       {
-//      	detections[i].draw(img);
+
+        ROS_INFO("Detected.");
+  //      detections[i].draw(img);
       
       // Camera to world
       Eigen::Vector3d translation;
       Eigen::Matrix3d rotation;
       
-
       detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
       Eigen::Quaterniond q(rotation);
 //      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
@@ -132,7 +143,7 @@ public:
         geometry_msgs::TransformStamped transformStamped;
   
         transformStamped.header.stamp = ros::Time::now();
-        transformStamped.header.frame_id = "local_origin";
+        transformStamped.header.frame_id = "marker_origin";
         transformStamped.child_frame_id = "camera";
         transformStamped.transform.translation.x = translation.x();
         transformStamped.transform.translation.y = translation.y();
@@ -145,21 +156,20 @@ public:
 
         br.sendTransform(transformStamped);
 
-
-        geometry_msgs::PoseStamped pose;
-        std_msgs::Header header;
+//        geometry_msgs::PoseStamped pose;
+//        std_msgs::Header header;
         
 //        pose.pose.position.x = tf_w2c(0, 3);
 //        pose.pose.position.y = tf_w2c(1, 3);
 //        pose.pose.position.z = tf_w2c(2, 3);
 //        pose.pose.orientation.x = 0;
-        pose.pose.orientation.y = 0;
-        pose.pose.orientation.z = 0;
-        pose.pose.orientation.w = 1.0;
+//        pose.pose.orientation.y = 0;
+//        pose.pose.orientation.z = 0;
+//        pose.pose.orientation.w = 1.0;
 
-        pose.header.frame_id = "cam";
+//        pose.header.frame_id = "cam";
 
-	      pub_->publish(pose);
+//	      pub_->publish(pose);
         break; // Only use 1st detection
       }
       
@@ -167,7 +177,7 @@ public:
 
     if (vis_)
     {
-      cv::imshow("view", img_gray);
+      cv::imshow("view", img_gray_);
       cv::waitKey(1);
     }
 //    sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img).toImageMsg();

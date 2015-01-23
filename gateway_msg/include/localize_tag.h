@@ -60,8 +60,8 @@ public:
   void init()
   {
     // TODO:
-    //tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
-    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
+    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
+    //tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
 //    cv::namedWindow("view");
   }
 
@@ -102,12 +102,12 @@ public:
       ROS_DEBUG("%d,%d", img_gray.rows, img_gray.cols);
     }
       
-    //std::cout << detections.size() << std::endl;
+    std::cout << detections.size() << std::endl;
     
     geometry_msgs::PoseStamped pose;
     pub_->publish(pose);
     
-
+/*
     for (size_t i = 0; i < detections.size(); ++i)
     {
       // TODO:
@@ -140,7 +140,7 @@ public:
       }
       
     }  
-
+*/
     if (vis_)
     {
       cv::imshow("view", img_gray);
