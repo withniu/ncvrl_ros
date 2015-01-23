@@ -14,9 +14,14 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "apriltags/TagDetector.h"
-#include "apriltags/Tag36h11.h"
-#include "apriltags/Tag16h5.h"
+//#include "apriltags/TagDetector.h"
+//#include "apriltags/Tag36h11.h"
+//#include "apriltags/Tag16h5.h"
+
+#include "apriltag.h"
+#include "tag36h11.h"
+#include "zarray.h"
+
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
@@ -26,11 +31,11 @@ class LocalizeCamTag
 {
 protected:
   cv::Mat img_;
-  cv::Mat img_gray_;  //< Image buffer
 //  geometry_msgs::PoseWithCovarianceStamped pose_; //< Pose buffer  
-  bool new_image_;
-  AprilTags::TagDetector *tag_detector_;
-  AprilTags::TagCodes tag_codes_;
+//  AprilTags::TagDetector *tag_detector_;
+//  AprilTags::TagCodes tag_codes_;
+
+  apriltag_detector_t *td_;
 
   bool vis_;
 
@@ -44,7 +49,7 @@ protected:
 public:
   LocalizeCamTag() 
   : tag_detector_   (NULL)
-  , tag_codes_      (AprilTags::tagCodes36h11)
+  //, tag_codes_      (AprilTags::tagCodes36h11)
     // TODO:
   //, tag_codes_      (AprilTags::tagCodes16h5)
   , tag_size_       (0.077)   // Meter
@@ -55,20 +60,25 @@ public:
   , width_          (640)
   , height_         (480)
   , vis_            (false)
-  , new_image_      (false)
   , pub_            (NULL)
   , pub_image_      (NULL)
+  , td_             (NULL)
   {
   }
   virtual ~LocalizeCamTag()
-  {}
+  {
+    apriltag_detector_destroy(td_);
+  }
 
   void init()
   {
     // TODO:
-    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
+//    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
 //    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
 //    cv::namedWindow("view");
+    td_ = apriltag_detector_create();
+    apriltag_detector_add_family(td_, 1);
+
   }
 
   void registerPublisher(ros::Publisher *pub, image_transport::Publisher *pub_image)
@@ -79,43 +89,30 @@ public:
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   {
-    
-    cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
-    cv::cvtColor(img_ptr->image, img_gray_, CV_BGR2GRAY);
-    new_image_ = true;
-  }
-  void localize()
-  {
-    if (new_image_ == false)
-      return;
-    new_image_ = false;
+    // tf2 broadcaster
     static tf2_ros::TransformBroadcaster br;
-    // Deep copy to image buffer
-//    cv_bridge::toCvShare(msg, "bgr8")->image.copyTo(img_);
-
-   // cv::Mat img, img_gray;
+    // Covert over cv_bridge
+    cv::Mat image_gray;    
+    cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
+    cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
     
-//    cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.3158, 0.1439, -1.5443e-04, 5.1411e-04, -0.0397);
+    // Covnert to zarray
+    image_u8_t *img = (image_u8_t *)img_gray.data;
+    zarray_t *detections = apriltag_detector_detect(td_, img);
+    
+    for (int i = 0; i < zarray_size(detections); i++) {
+      apriltag_detection_t *det;
+      zarray_get(detections, i, &det);
 
+      printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
+                                                                                  apriltag_detection_destroy(det);
+                                                                               }
+    zarray_destroy(detections);
+
+
+    
+ /*   
     cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
-//    cv::Mat img_undist;
-
-//    cv::undistort(img_, img_undist, camera_matrix, dist_coeffs);
-
-//    cv::Mat img_msg = cv_bridge::toCvShare(msg, "bgr8")->image;
-//    cv::cvtColor(img_msg, img_gray, CV_BGR2GRAY);
-//    cv::cvtColor(img_gray, img, CV_GRAY2BGR);
-
-    //cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "mono8");
-    std::vector<AprilTags::TagDetection> detections;
-    try
-    {
-      detections = tag_detector_->extractTags(img_gray_);
-    }
-    catch(const std::exception& e)
-    {
-      ROS_DEBUG("%d,%d", img_gray_.rows, img_gray_.cols);
-    }
       
     std::cout << detections.size() << std::endl;
     
@@ -184,7 +181,8 @@ public:
 //    pub_image_->publish(msg_tag);
  //   detect();
  //   pub_->publish(pose_);
-  }
+ */
+}
 
 //  void publishMessage(ros::Publisher *pub_message)
 //  {
