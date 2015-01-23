@@ -77,7 +77,7 @@ public:
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   {
-static tf2_ros::TransformBroadcaster br;
+    static tf2_ros::TransformBroadcaster br;
     // Deep copy to image buffer
 //    cv_bridge::toCvShare(msg, "bgr8")->image.copyTo(img_);
 
@@ -134,9 +134,9 @@ static tf2_ros::TransformBroadcaster br;
         transformStamped.header.stamp = ros::Time::now();
         transformStamped.header.frame_id = "local_origin";
         transformStamped.child_frame_id = "camera";
-        transformStamped.transform.translation.x = translation.x;
-        transformStamped.transform.translation.y = translation.y;
-        transformStamped.transform.translation.z = translation.z;
+        transformStamped.transform.translation.x = translation.x();
+        transformStamped.transform.translation.y = translation.y();
+        transformStamped.transform.translation.z = translation.z();
 
         transformStamped.transform.rotation.x = q.x();
         transformStamped.transform.rotation.y = q.y();
@@ -146,10 +146,8 @@ static tf2_ros::TransformBroadcaster br;
         br.sendTransform(transformStamped);
 
 
-      geometry_msgs::PoseStamped pose;
+        geometry_msgs::PoseStamped pose;
         std_msgs::Header header;
-
-      
         
 //        pose.pose.position.x = tf_w2c(0, 3);
 //        pose.pose.position.y = tf_w2c(1, 3);
@@ -166,7 +164,7 @@ static tf2_ros::TransformBroadcaster br;
       }
       
     }  
-*/
+
     if (vis_)
     {
       cv::imshow("view", img_gray);

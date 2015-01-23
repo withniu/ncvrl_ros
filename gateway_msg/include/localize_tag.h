@@ -140,7 +140,7 @@ public:
       }
       
     }  
-*/
+
     if (vis_)
     {
       cv::imshow("view", img_gray);

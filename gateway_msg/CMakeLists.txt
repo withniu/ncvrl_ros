@@ -124,6 +124,7 @@ include_directories(
 ## Declare a cpp executable
 add_executable(ptam_metric_node src/ptam_metric_node.cpp)
 add_executable(localize_tag_node src/localize_tag_node.cpp)
+add_executable(localize_cam_tag_node src/localize_cam_tag_node.cpp)
 #add_executable(localize_cam_node src/localize_cam_node.cpp)
 add_executable(sync_image_odom src/sync_image_odom.cpp)
 #add_executable(simple_sift src/simple_sift.cpp)
@@ -140,6 +141,10 @@ target_link_libraries(ptam_metric_node
    ${OpenCV_LIBS})
 
 target_link_libraries(localize_tag_node
+   ${catkin_LIBRARIES}
+   ${OpenCV_LIBS})
+
+target_link_libraries(localize_cam_tag_node
    ${catkin_LIBRARIES}
    ${OpenCV_LIBS})
 
