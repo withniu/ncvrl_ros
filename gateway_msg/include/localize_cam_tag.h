@@ -18,9 +18,9 @@
 //#include "apriltags/Tag36h11.h"
 //#include "apriltags/Tag16h5.h"
 
-#include "apriltag.h"
-#include "tag36h11.h"
-#include "zarray.h"
+#include "apriltag_c/apriltag.h"
+#include "apriltag_c/tag36h11.h"
+#include "apriltag_c/common/zarray.h"
 
 
 #include <tf2/LinearMath/Quaternion.h>
@@ -36,7 +36,7 @@ protected:
 //  AprilTags::TagCodes tag_codes_;
 
   apriltag_detector_t *td_;
-
+  apriltag_family_t *tf_;
   bool vis_;
 
   float tag_size_;
@@ -48,11 +48,11 @@ protected:
 
 public:
   LocalizeCamTag() 
-  : tag_detector_   (NULL)
+  //: tag_detector_   (NULL)
   //, tag_codes_      (AprilTags::tagCodes36h11)
     // TODO:
   //, tag_codes_      (AprilTags::tagCodes16h5)
-  , tag_size_       (0.077)   // Meter
+  : tag_size_       (0.077)   // Meter
   , fx_             (366.6719)
   , fy_             (367.3712)
   , cx_             (353.4861)
@@ -63,11 +63,16 @@ public:
   , pub_            (NULL)
   , pub_image_      (NULL)
   , td_             (NULL)
+  , tf_             (NULL)
   {
   }
+  
+  
   virtual ~LocalizeCamTag()
   {
     apriltag_detector_destroy(td_);
+    tag36h11_destroy(tf_);
+
   }
 
   void init()
@@ -77,7 +82,15 @@ public:
 //    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
 //    cv::namedWindow("view");
     td_ = apriltag_detector_create();
-    apriltag_detector_add_family(td_, 1);
+    tf_ = tag36h11_create();
+    tf_->black_border = 1;
+    apriltag_detector_add_family(td_, tf_);
+    td_->quad_decimate = 1.0;
+    td_->quad_sigma = 0.0;
+    td_->nthreads = 4;
+    td_->debug = false;
+    td_->refine_decode = 0;
+    td_->refine_pose = 0;
 
   }
 
@@ -89,15 +102,24 @@ public:
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   {
+    ROS_INFO("Callback.");
+    
     // tf2 broadcaster
     static tf2_ros::TransformBroadcaster br;
     // Covert over cv_bridge
-    cv::Mat image_gray;    
+    cv::Mat img_gray;    
     cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
     cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
-    
     // Covnert to zarray
-    image_u8_t *img = (image_u8_t *)img_gray.data;
+    // Avoid hard copy
+    image_u8_t *img = image_u8_create(img_gray.cols, img_gray.rows);
+    for (int y = 0; y < img->height; ++y)
+    {   
+      memcpy(&img->buf[y * img->stride], img_gray.ptr(y), sizeof(char) * img->width);
+    }
+    
+//    image_u8_write_pnm(img, "/home/withniu/tmp.pnm");
+
     zarray_t *detections = apriltag_detector_detect(td_, img);
     
     for (int i = 0; i < zarray_size(detections); i++) {
@@ -105,9 +127,10 @@ public:
       zarray_get(detections, i, &det);
 
       printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
-                                                                                  apriltag_detection_destroy(det);
-                                                                               }
+                                                                             apriltag_detection_destroy(det);
+                                                                           }
     zarray_destroy(detections);
+    image_u8_destroy(img);
 
 
     

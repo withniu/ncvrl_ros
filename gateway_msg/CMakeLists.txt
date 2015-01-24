@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(gateway_msg)
+project(gateway_msg C CXX)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -24,7 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(cmake_modules REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
-
+find_package(Threads)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -107,7 +107,7 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-
+set(CMAKE_CXX_FLAGS "-pthread")
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(include)
@@ -136,6 +136,7 @@ add_executable(sync_image_odom src/sync_image_odom.cpp)
 
 ## Specify libraries to link a library or executable target against
 link_directories(/home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib)
+#add_library(${CMAKE_SOURCE_DIR}/libapriltag.a STATIC IMPORTED)
 target_link_libraries(ptam_metric_node
    ${catkin_LIBRARIES}
    ${OpenCV_LIBS})
@@ -146,7 +147,9 @@ target_link_libraries(localize_tag_node
 
 target_link_libraries(localize_cam_tag_node
    ${catkin_LIBRARIES}
-   ${OpenCV_LIBS})
+   ${OpenCV_LIBS}
+   /home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libapriltag.a
+   )
 
  #target_link_libraries(localize_cam_node
  #  ${catkin_LIBRARIES}
