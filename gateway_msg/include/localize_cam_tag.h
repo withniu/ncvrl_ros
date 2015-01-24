@@ -13,15 +13,11 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-
-//#include "apriltags/TagDetector.h"
-//#include "apriltags/Tag36h11.h"
-//#include "apriltags/Tag16h5.h"
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include "apriltag_c/apriltag.h"
 #include "apriltag_c/tag36h11.h"
 #include "apriltag_c/common/zarray.h"
-
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
@@ -32,12 +28,12 @@ class LocalizeCamTag
 protected:
   cv::Mat img_;
 //  geometry_msgs::PoseWithCovarianceStamped pose_; //< Pose buffer  
-//  AprilTags::TagDetector *tag_detector_;
-//  AprilTags::TagCodes tag_codes_;
 
   apriltag_detector_t *td_;
   apriltag_family_t *tf_;
   bool vis_;
+
+  std::vector<cv::Point3f> object_points_;
 
   float tag_size_;
   float fx_, fy_, cx_, cy_;
@@ -48,23 +44,23 @@ protected:
 
 public:
   LocalizeCamTag() 
-  //: tag_detector_   (NULL)
-  //, tag_codes_      (AprilTags::tagCodes36h11)
-    // TODO:
-  //, tag_codes_      (AprilTags::tagCodes16h5)
   : tag_size_       (0.077)   // Meter
-  , fx_             (366.6719)
-  , fy_             (367.3712)
-  , cx_             (353.4861)
-  , cy_             (247.5548)
-  , width_          (640)
-  , height_         (480)
+  , fx_             (978.470806)
+  , fy_             (981.508278)
+  , cx_             (591.695675)
+  , cy_             (442.075450)
+  , width_          (1280)
+  , height_         (960)
   , vis_            (false)
   , pub_            (NULL)
   , pub_image_      (NULL)
   , td_             (NULL)
   , tf_             (NULL)
   {
+    object_points_.push_back(cv::Point3f(0, 0, 0));
+    object_points_.push_back(cv::Point3f(tag_size_, 0, 0));
+    object_points_.push_back(cv::Point3f(tag_size_, tag_size_, 0));
+    object_points_.push_back(cv::Point3f(, tag_size_, 0));
   }
   
   
@@ -78,8 +74,6 @@ public:
   void init()
   {
     // TODO:
-//    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 1);
-//    tag_detector_ = new AprilTags::TagDetector(tag_codes_, 2);
 //    cv::namedWindow("view");
     td_ = apriltag_detector_create();
     tf_ = tag36h11_create();
@@ -122,43 +116,39 @@ public:
 
     zarray_t *detections = apriltag_detector_detect(td_, img);
     
+    std::vector<cv::Point2f> corners;
     for (int i = 0; i < zarray_size(detections); i++) {
       apriltag_detection_t *det;
       zarray_get(detections, i, &det);
 
       printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
-                                                                             apriltag_detection_destroy(det);
-                                                                           }
-    zarray_destroy(detections);
-    image_u8_destroy(img);
-
-
-    
- /*   
-    cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
       
-    std::cout << detections.size() << std::endl;
-    
- //   geometry_msgs::PoseStamped pose;
- //   pub_->publish(pose);
-    
-
-    for (size_t i = 0; i < detections.size(); ++i)
-    {
-      // TODO:
-      if (detections[i].id == 0)
+      if (det->id == 1)
       {
+        corners.push_back(cv::Point2f(det->p[0][0], det->p[0][1]));
+        corners.push_back(cv::Point2f(det->p[1][0], det->p[1][1]));
+        corners.push_back(cv::Point2f(det->p[2][0], det->p[2][1]));
+        corners.push_back(cv::Point2f(det->p[3][0], det->p[3][1]));
+      	// PnP
+        cv::Mat rvec, tvec;
+        cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
+        cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.339776, 0.111324, -0.000647, 0.001356, 0.000000);
+        cv::solvePnP(object_points_, corners, camera_matrix, dist_coeffs, rvec, tvec);
+        // Convert to cam to world
+        cv::Mat R;
+        cv::Rodrigues(rvec, R);
+        R = R.t();
+        tvec = -R * tvec;
 
-        ROS_INFO("Detected.");
-  //      detections[i].draw(img);
-      
-      // Camera to world
-      Eigen::Vector3d translation;
-      Eigen::Matrix3d rotation;
-      
-      detections[i].getRelativeTranslationRotation(tag_size_, fx_, fy_, cx_, cy_, translation, rotation);
-      Eigen::Quaterniond q(rotation);
-//      	Eigen::Matrix4d tf_w2c = detections[i].getRelativeTransform(tag_size_, fx_, fy_, cx_, cy_);
+	// Convert to Eigen
+        Eigen::Vector3d translation;
+        Eigen::Matrix3d rotation;
+
+	translation << tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2);
+        rotation << R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2), 
+                    R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2), 
+                    R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2);
+        Eigen::Quaterniond q(rotation);
 
         geometry_msgs::TransformStamped transformStamped;
   
@@ -175,6 +165,20 @@ public:
         transformStamped.transform.rotation.w = q.w();
 
         br.sendTransform(transformStamped);
+        
+      }
+
+      apriltag_detection_destroy(det);
+    
+
+
+    }
+    zarray_destroy(detections);
+    image_u8_destroy(img);
+
+    
+ /*   
+      
 
 //        geometry_msgs::PoseStamped pose;
 //        std_msgs::Header header;
