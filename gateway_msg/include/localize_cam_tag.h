@@ -10,6 +10,8 @@
 //#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 
+#include <Eigen/Dense>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -60,7 +62,7 @@ public:
     object_points_.push_back(cv::Point3f(0, 0, 0));
     object_points_.push_back(cv::Point3f(tag_size_, 0, 0));
     object_points_.push_back(cv::Point3f(tag_size_, tag_size_, 0));
-    object_points_.push_back(cv::Point3f(, tag_size_, 0));
+    object_points_.push_back(cv::Point3f(0, tag_size_, 0));
   }
   
   
@@ -143,8 +145,8 @@ public:
 	// Convert to Eigen
         Eigen::Vector3d translation;
         Eigen::Matrix3d rotation;
-
-	translation << tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2);
+        
+        translation << tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2);
         rotation << R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2), 
                     R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2), 
                     R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2);
