@@ -46,7 +46,7 @@ protected:
 
 public:
   LocalizeCamTag() 
-  : tag_size_       (0.077)   // Meter
+  : tag_size_       (0.165)   // Meter
   , fx_             (978.470806)
   , fy_             (981.508278)
   , cx_             (591.695675)
@@ -70,13 +70,12 @@ public:
   {
     apriltag_detector_destroy(td_);
     tag36h11_destroy(tf_);
-
   }
 
   void init()
   {
     // TODO:
-//    cv::namedWindow("view");
+    // Tag detection params
     td_ = apriltag_detector_create();
     tf_ = tag36h11_create();
     tf_->black_border = 1;
@@ -172,51 +171,25 @@ public:
         transformStamped.transform.rotation.w = q.w();
 
         br.sendTransform(transformStamped);
-        
       }
 
-
       apriltag_detection_destroy(det);
-    
-
 
     }
     zarray_destroy(detections);
     image_u8_destroy(img);
-
-    
- /*   
-      
-
-//        geometry_msgs::PoseStamped pose;
-//        std_msgs::Header header;
-        
-//        pose.pose.position.x = tf_w2c(0, 3);
-//        pose.pose.position.y = tf_w2c(1, 3);
-//        pose.pose.position.z = tf_w2c(2, 3);
-//        pose.pose.orientation.x = 0;
-//        pose.pose.orientation.y = 0;
-//        pose.pose.orientation.z = 0;
-//        pose.pose.orientation.w = 1.0;
-
-//        pose.header.frame_id = "cam";
-
-//	      pub_->publish(pose);
-        break; // Only use 1st detection
-      }
-      
-    }  
-
-    if (vis_)
-    {
-      cv::imshow("view", img_gray_);
-      cv::waitKey(1);
+    break; // Only use 1st detection
     }
+      
+  }  
+
+  if (vis_)
+  {
 //    sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img).toImageMsg();
 //    pub_image_->publish(msg_tag);
  //   detect();
  //   pub_->publish(pose_);
- */
+  }
 }
 
 //  void publishMessage(ros::Publisher *pub_message)
@@ -252,10 +225,6 @@ public:
     }
   }
 
-  void detect()
-  {
-  }
- 
 };
 
 #endif
