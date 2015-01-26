@@ -118,9 +118,11 @@ public:
     cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
     cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
     
+    cv::Rect roi(0, 0, img_gray.cols, img_gray.rows);
     if (!corners_.empty())
     {
-      img_roi = img_gray(cv::boundingRect(corners_));
+      roi = cv::boundingRect(corners_) + cv::Size(30, 30);
+      img_roi = img_gray(roi);
     }
     else
     {
@@ -150,10 +152,10 @@ public:
       {
         corners_.clear();
         // Image points
-        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]));
-        corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]));
-        corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]));
-        corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]));
+        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]) + roi.tl());
+        corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]) + roi.tl());
+        corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]) + roi.tl());
+        corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]) + roi.tl());
       	// PnP
         cv::Mat rvec, tvec;
         cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
