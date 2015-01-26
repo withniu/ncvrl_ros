@@ -121,7 +121,8 @@ public:
     cv::Rect roi(0, 0, img_gray.cols, img_gray.rows);
     if (!corners_.empty())
     {
-      roi = cv::boundingRect(corners_) + cv::Size(30, 30);
+      const int b = 50;
+      roi = cv::boundingRect(corners_) - cv::Point(b, b) + cv::Size(2 * b, 2 * b);
       img_roi = img_gray(roi);
     }
     else
@@ -129,7 +130,7 @@ public:
       img_roi = img_gray;
     }
 
-    
+    std::cout << roi << img_roi.size() << std::endl; 
     corners_.clear();
 
     // Covnert to zarray
@@ -139,11 +140,13 @@ public:
     {   
       memcpy(&img->buf[y * img->stride], img_roi.ptr(y), sizeof(char) * img->width);
     }
-//    image_u8_write_pnm(img, "/home/withniu/tmp.pnm");
 
     // Tag detection
     zarray_t *detections = apriltag_detector_detect(td_, img);
-    
+
+    if (zarray_size(detections) == 0)
+      image_u8_write_pnm(img, "/data/tmp.pnm");
+
     for (int i = 0; i < zarray_size(detections); i++) {
       apriltag_detection_t *det;
       zarray_get(detections, i, &det);
@@ -200,9 +203,11 @@ public:
       
         ROS_INFO("%f, %f, %f", translation.x(), translation.y(), translation.z());
       }
+
       apriltag_detection_destroy(det);
 
     }
+    
     zarray_destroy(detections);
     image_u8_destroy(img);
     
