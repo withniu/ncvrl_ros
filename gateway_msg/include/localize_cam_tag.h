@@ -152,7 +152,7 @@ public:
       {
         corners_.clear();
         // Image points
-        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]) + static_cast<cv::Point2f>(roi.tl()));
+        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]) + static_cast<cv::Point_<float> >(roi.tl()));
         corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]) + static_cast<cv::Point2f>(roi.tl()));
         corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]) + static_cast<cv::Point2f>(roi.tl()));
         corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]) + static_cast<cv::Point2f>(roi.tl()));
