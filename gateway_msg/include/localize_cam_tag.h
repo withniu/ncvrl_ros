@@ -2,6 +2,7 @@
 #define _LOCALIZE_CAM_TAG_H_
 
 #include <iostream>
+#include <unordered_map>
 
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
@@ -43,9 +44,10 @@ protected:
   apriltag_family_t *tf_;
   bool vis_;
 
-  
+  std::unordered_map<int, TagDetection> tag_detections_;
 
   std::vector<cv::Point3f> object_points_;
+  std::vector<cv::Point2f> corner_;
 
   float tag_size_;
   float fx_, fy_, cx_, cy_;
@@ -112,23 +114,31 @@ public:
     // tf2 broadcaster
     static tf2_ros::TransformBroadcaster br;
     // Covert over cv_bridge
-    cv::Mat img_gray;    
+    cv::Mat img_gray, img_roi;    
     cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
     cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
     
+    if (!corners_.empty())
+    {
+      img_roi = img_gray(cv::boundingRect(corners_));
+    }
+    else
+    {
+      img_roi = img_gray;
+    }
+
     // Covnert to zarray
     // TODO: Avoid hard copy
-    image_u8_t *img = image_u8_create(img_gray.cols, img_gray.rows);
+    image_u8_t *img = image_u8_create(img_roi.cols, img_roi.rows);
     for (int y = 0; y < img->height; ++y)
     {   
-      memcpy(&img->buf[y * img->stride], img_gray.ptr(y), sizeof(char) * img->width);
+      memcpy(&img->buf[y * img->stride], img_roi.ptr(y), sizeof(char) * img->width);
     }
 //    image_u8_write_pnm(img, "/home/withniu/tmp.pnm");
 
     // Tag detection
     zarray_t *detections = apriltag_detector_detect(td_, img);
     
-    std::vector<cv::Point2f> corners;
     for (int i = 0; i < zarray_size(detections); i++) {
       apriltag_detection_t *det;
       zarray_get(detections, i, &det);
@@ -138,16 +148,17 @@ public:
       // ID 0 is used here
       if (det->id == 0)
       {
+        corners_.clear();
         // Image points
-        corners.push_back(cv::Point2f(det->p[0][0], det->p[0][1]));
-        corners.push_back(cv::Point2f(det->p[1][0], det->p[1][1]));
-        corners.push_back(cv::Point2f(det->p[2][0], det->p[2][1]));
-        corners.push_back(cv::Point2f(det->p[3][0], det->p[3][1]));
+        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]));
+        corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]));
+        corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]));
+        corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]));
       	// PnP
         cv::Mat rvec, tvec;
         cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
         cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.339776, 0.111324, -0.000647, 0.001356, 0.000000);
-        cv::solvePnP(object_points_, corners, camera_matrix, dist_coeffs, rvec, tvec);
+        cv::solvePnP(object_points_, corners_, camera_matrix, dist_coeffs, rvec, tvec);
         // Convert to cam to world
         cv::Mat R;
         cv::Rodrigues(rvec, R);
