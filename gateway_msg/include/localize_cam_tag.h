@@ -125,8 +125,8 @@ public:
 
       printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
       
-      // ID 1 is used here
-      if (det->id == 1)
+      // ID 0 is used here
+      if (det->id == 0)
       {
         // Image points
         corners.push_back(cv::Point2f(det->p[0][0], det->p[0][1]));
@@ -171,26 +171,23 @@ public:
         transformStamped.transform.rotation.w = q.w();
 
         br.sendTransform(transformStamped);
+      
+        ROS_INFO("%f, %f, %f", translation.x(), translation.y(), translation.z());
       }
-
       apriltag_detection_destroy(det);
 
     }
     zarray_destroy(detections);
     image_u8_destroy(img);
-    break; // Only use 1st detection
-    }
-      
-  }  
-
-  if (vis_)
-  {
+    
+    if (vis_)
+    {
 //    sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img).toImageMsg();
 //    pub_image_->publish(msg_tag);
  //   detect();
  //   pub_->publish(pose_);
+    }
   }
-}
 
 //  void publishMessage(ros::Publisher *pub_message)
 //  {
@@ -220,7 +217,6 @@ public:
           ROS_WARN("Empty image, skipping...");
           return;
         }
-        detect();
         break;
     }
   }
