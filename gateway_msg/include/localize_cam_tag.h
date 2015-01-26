@@ -129,6 +129,9 @@ public:
       img_roi = img_gray;
     }
 
+    
+    corners_.clear();
+
     // Covnert to zarray
     // TODO: Avoid hard copy
     image_u8_t *img = image_u8_create(img_roi.cols, img_roi.rows);
@@ -150,9 +153,8 @@ public:
       // ID 0 is used here
       if (det->id == 0)
       {
-        corners_.clear();
         // Image points
-        cv::Point2f offset(roi.x, roy.y);
+        cv::Point2f offset(roi.x, roi.y);
         corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]) + offset);
         corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]) + offset);
         corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]) + offset);
