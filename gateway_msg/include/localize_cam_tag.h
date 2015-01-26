@@ -2,7 +2,7 @@
 #define _LOCALIZE_CAM_TAG_H_
 
 #include <iostream>
-#include <unordered_map>
+//#include <unordered_map>
 
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
@@ -44,10 +44,10 @@ protected:
   apriltag_family_t *tf_;
   bool vis_;
 
-  std::unordered_map<int, TagDetection> tag_detections_;
+//  std::unordered_map<int, TagDetection> tag_detections_;
 
   std::vector<cv::Point3f> object_points_;
-  std::vector<cv::Point2f> corner_;
+  std::vector<cv::Point2f> corners_;
 
   float tag_size_;
   float fx_, fy_, cx_, cy_;
