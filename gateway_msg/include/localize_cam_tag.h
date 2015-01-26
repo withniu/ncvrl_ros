@@ -152,10 +152,10 @@ public:
       {
         corners_.clear();
         // Image points
-        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]) + roi.tl());
-        corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]) + roi.tl());
-        corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]) + roi.tl());
-        corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]) + roi.tl());
+        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]) + cv::Point2f(roi.tl()));
+        corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]) + cv::Point2f(roi.tl()));
+        corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]) + cv::Point2f(roi.tl()));
+        corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]) + cv::Point2f(roi.tl()));
       	// PnP
         cv::Mat rvec, tvec;
         cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
