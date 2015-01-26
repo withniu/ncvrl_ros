@@ -25,6 +25,14 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
 
+
+struct TagDetection
+{
+  int id;
+  std::vector<cv::Point2f> corners;
+};
+
+
 class LocalizeCamTag
 {
 protected:
@@ -34,6 +42,8 @@ protected:
   apriltag_detector_t *td_;
   apriltag_family_t *tf_;
   bool vis_;
+
+  
 
   std::vector<cv::Point3f> object_points_;
 
