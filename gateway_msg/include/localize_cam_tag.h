@@ -144,8 +144,8 @@ public:
     // Tag detection
     zarray_t *detections = apriltag_detector_detect(td_, img);
 
-    if (zarray_size(detections) == 0)
-      image_u8_write_pnm(img, "/data/tmp.pnm");
+ //   if (zarray_size(detections) == 0)
+ //     image_u8_write_pnm(img, "/data/tmp.pnm");
 
     for (int i = 0; i < zarray_size(detections); i++) {
       apriltag_detection_t *det;
