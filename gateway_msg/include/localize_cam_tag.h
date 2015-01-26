@@ -98,7 +98,7 @@ public:
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   {
-    ROS_INFO("Callback.");
+//    ROS_INFO("Callback.");
     
     // tf2 broadcaster
     static tf2_ros::TransformBroadcaster br;
@@ -106,16 +106,17 @@ public:
     cv::Mat img_gray;    
     cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
     cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
+    
     // Covnert to zarray
-    // Avoid hard copy
+    // TODO: Avoid hard copy
     image_u8_t *img = image_u8_create(img_gray.cols, img_gray.rows);
     for (int y = 0; y < img->height; ++y)
     {   
       memcpy(&img->buf[y * img->stride], img_gray.ptr(y), sizeof(char) * img->width);
     }
-    
 //    image_u8_write_pnm(img, "/home/withniu/tmp.pnm");
 
+    // Tag detection
     zarray_t *detections = apriltag_detector_detect(td_, img);
     
     std::vector<cv::Point2f> corners;
@@ -125,8 +126,10 @@ public:
 
       printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
       
+      // ID 1 is used here
       if (det->id == 1)
       {
+        // Image points
         corners.push_back(cv::Point2f(det->p[0][0], det->p[0][1]));
         corners.push_back(cv::Point2f(det->p[1][0], det->p[1][1]));
         corners.push_back(cv::Point2f(det->p[2][0], det->p[2][1]));
@@ -142,7 +145,7 @@ public:
         R = R.t();
         tvec = -R * tvec;
 
-	// Convert to Eigen
+	      // Convert to Eigen
         Eigen::Vector3d translation;
         Eigen::Matrix3d rotation;
         
@@ -151,12 +154,14 @@ public:
                     R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2), 
                     R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2);
         Eigen::Quaterniond q(rotation);
-
+        
+        // Wrap as tf2
         geometry_msgs::TransformStamped transformStamped;
   
-        transformStamped.header.stamp = ros::Time::now();
+        transformStamped.header.stamp = msg->header.stamp;  // Use image stamp
         transformStamped.header.frame_id = "marker_origin";
         transformStamped.child_frame_id = "camera";
+        
         transformStamped.transform.translation.x = translation.x();
         transformStamped.transform.translation.y = translation.y();
         transformStamped.transform.translation.z = translation.z();
@@ -169,6 +174,7 @@ public:
         br.sendTransform(transformStamped);
         
       }
+
 
       apriltag_detection_destroy(det);
     
