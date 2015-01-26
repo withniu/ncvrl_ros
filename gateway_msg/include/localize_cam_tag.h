@@ -117,12 +117,23 @@ public:
     cv::Mat img_gray, img_roi;    
     cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
     cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
-    
-    cv::Rect roi(0, 0, img_gray.cols, img_gray.rows);
+   
+    int width = img_gray.cols;
+    int height = img_gray.rows;
+    cv::Rect roi(0, 0, width, height);
     if (!corners_.empty())
     {
       const int b = 50;
       roi = cv::boundingRect(corners_) - cv::Point(b, b) + cv::Size(2 * b, 2 * b);
+      // Bound in the image 
+      cv::Point tl = roi.tl();
+      cv::Point br = roi.br();
+      tl.x = tl.x < 0 ? 0 : tl.x;
+      tl.y = tl.y < 0 ? 0 : tl.y;
+      br.x = br.x > width ? width : br.x;
+      br.y = br.y > height ? height : br.y;
+
+      roi = cv::Rect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
       img_roi = img_gray(roi);
     }
     else
@@ -201,7 +212,7 @@ public:
 
         br.sendTransform(transformStamped);
       
-        ROS_INFO("%f, %f, %f", translation.x(), translation.y(), translation.z());
+//        ROS_INFO("%f, %f, %f", translation.x(), translation.y(), translation.z());
       }
 
       apriltag_detection_destroy(det);
@@ -213,8 +224,16 @@ public:
     
     if (vis_)
     {
-//    sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img).toImageMsg();
-//    pub_image_->publish(msg_tag);
+      cv::cvtColor(img_gray, img_gray, CV_GRAY2BGR);
+      for (int i = 0; i < corners_.size(); ++i)
+      {
+        char buf[100];
+        sprintf(buf, "%d", i);
+        cv::putText(img_gray, std::string(buf), corners_[i], cv::FONT_HERSHEY_PLAIN, 20, cv::Scalar(0, 0, 255));
+      }
+      ROS_INFO("draw.");
+      sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img_gray).toImageMsg();
+      pub_image_->publish(msg_tag);
  //   detect();
  //   pub_->publish(pose_);
     }
