@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   cv_bridge
   image_transport
+  image_geometry
   rqt_reconfigure
   ethz_apriltag2
   tf

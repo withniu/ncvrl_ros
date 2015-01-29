@@ -10,6 +10,7 @@
 #include <std_msgs/String.h>
 //#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <image_geometry/pinhole_camera_model.h>
 
 #include <Eigen/Dense>
 
@@ -44,6 +45,7 @@ protected:
   apriltag_family_t *tf_;
   bool vis_;
 
+  image_geometry::PinholeCameraModel model_;
 //  std::unordered_map<int, TagDetection> tag_detections_;
 
   std::vector<cv::Point3f> object_points_;
@@ -107,10 +109,13 @@ public:
     pub_image_ = pub_image;
   }
 
-  void imageCallback(const sensor_msgs::ImageConstPtr &msg)
+  void imageCallback(const sensor_msgs::ImageConstPtr &msg,
+                     const sensor_msgs::CameraInfoConstPtr &cinfo_msg)
   {
 //    ROS_INFO("Callback.");
     
+    model_.fromCameraInfo(cinfo_msg);
+
     // tf2 broadcaster
     static tf2_ros::TransformBroadcaster br;
     // Covert over cv_bridge
@@ -175,9 +180,12 @@ public:
         corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]) + offset);
       	// PnP
         cv::Mat rvec, tvec;
-        cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
-        cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.339776, 0.111324, -0.000647, 0.001356, 0.000000);
-        cv::solvePnP(object_points_, corners_, camera_matrix, dist_coeffs, rvec, tvec);
+        //cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
+        //cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.339776, 0.111324, -0.000647, 0.001356, 0.000000);
+        //cv::Mat camera_matrix = model_.fullIntrinsicMatrix();
+        //cv::Mat dist_coeffs = model_.distortionCoeffs();
+        
+        cv::solvePnP(object_points_, corners_, model_.fullIntrinsicMatrix(), model_.distortionCoeffs(), rvec, tvec);
         // Convert to cam to world
         cv::Mat R;
         cv::Rodrigues(rvec, R);

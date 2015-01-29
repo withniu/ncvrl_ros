@@ -11,7 +11,7 @@ int main(int argc, char **argv)
   node->init();
 
   image_transport::ImageTransport it(n);
-  image_transport::Subscriber sub_img = it.subscribe("image", 1, &LocalizeCamTag::imageCallback, node);
+  image_transport::CameraSubscriber sub_img = it.subscribeCamera("image", 1, &LocalizeCamTag::imageCallback, node);
   image_transport::Publisher pub_img = it.advertise("image_tag", 1);
 
   ros::Subscriber sub_cmd = n.subscribe("cmd", 1, &LocalizeCamTag::cmdCallback, node);
