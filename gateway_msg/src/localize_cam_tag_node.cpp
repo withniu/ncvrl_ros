@@ -19,7 +19,12 @@ int main(int argc, char **argv)
   ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseStamped>("pose_tag", 1);
   
   node->registerPublisher(&pub_pose, &pub_img);
-  
+  dynamic_reconfigure::Server<gateway_msg::LocalizeCamTagConfig> server;
+  dynamic_reconfigure::Server<gateway_msg::LocalizeCamTagConfig>::CallbackType f;
+
+  f = boost::bind(&LocalizeCamTag::configCallback, node, _1, _2);
+  server.setCallback(f);
+
   ros::Rate r(100);
 
   while (n.ok())

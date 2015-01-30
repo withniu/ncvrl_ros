@@ -86,7 +86,8 @@ find_package(Threads)
 #   geometry_msgs#   sensor_msgs#   std_msgs
 # )
 generate_dynamic_reconfigure_options(
-  cfg/localize_cam.cfg
+  #  cfg/localize_cam.cfg
+  cfg/LocalizeCamTag.cfg
 )
 
 ###################################
@@ -134,6 +135,7 @@ add_executable(sync_image_odom src/sync_image_odom.cpp)
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(gateway_msg_node gateway_msg_generate_messages_cpp)
 #add_dependencies(localize_cam_node ${PROJECT_NAME}_gencfg)
+add_dependencies(localize_cam_tag_node ${PROJECT_NAME}_gencfg)
 
 ## Specify libraries to link a library or executable target against
 #link_directories(/home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib)

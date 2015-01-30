@@ -27,6 +27,8 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
 
+#include <gateway_msg/LocalizeCamTagConfig.h>
+#include <dynamic_reconfigure/server.h>
 
 struct TagDetection
 {
@@ -67,16 +69,32 @@ public:
   , cy_             (442.075450)
   , width_          (1280)
   , height_         (960)
-  , vis_            (false)
+  , vis_            (true)
   , pub_            (NULL)
   , pub_image_      (NULL)
   , td_             (NULL)
   , tf_             (NULL)
   {
+    // id 0
     object_points_.push_back(cv::Point3f(0, 0, 0));
     object_points_.push_back(cv::Point3f(tag_size_, 0, 0));
     object_points_.push_back(cv::Point3f(tag_size_, tag_size_, 0));
     object_points_.push_back(cv::Point3f(0, tag_size_, 0));
+
+    // id 1
+    cv::Point3f translation(0.651, 0, 0); // Offset 0.651m in +x
+    object_points_.push_back(object_points_[0] + translation);
+    object_points_.push_back(object_points_[1] + translation);
+    object_points_.push_back(object_points_[2] + translation);
+    object_points_.push_back(object_points_[3] + translation);
+
+
+    // id 2
+    translation = cv::Point3f(0.651 * 2, 0, 0); // Offset 2x2x0.651m in +x
+    object_points_.push_back(object_points_[0] + translation);
+    object_points_.push_back(object_points_[1] + translation);
+    object_points_.push_back(object_points_[2] + translation);
+    object_points_.push_back(object_points_[3] + translation);
   }
   
   
@@ -108,12 +126,18 @@ public:
     pub_ = pub;
     pub_image_ = pub_image;
   }
+  void configCallback(gateway_msg::LocalizeCamTagConfig &config, uint32_t level) 
+  {
+    vis_ = config.vis;
+    ROS_INFO(vis_ ? "Visualization On" : "Visualization Off");
+  }
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg,
                      const sensor_msgs::CameraInfoConstPtr &cinfo_msg)
   {
 //    ROS_INFO("Callback.");
-    
+    static int counter = 0;
+     
     model_.fromCameraInfo(cinfo_msg);
 
     // tf2 broadcaster
@@ -126,7 +150,7 @@ public:
     int width = img_gray.cols;
     int height = img_gray.rows;
     cv::Rect roi(0, 0, width, height);
-    if (!corners_.empty())
+    if (!corners_.empty() && counter != 0)
     {
       const int b = 50;
       roi = cv::boundingRect(corners_) - cv::Point(b, b) + cv::Size(2 * b, 2 * b);
@@ -146,8 +170,9 @@ public:
       img_roi = img_gray;
     }
 
-    std::cout << roi << img_roi.size() << std::endl; 
+    //std::cout << roi << img_roi.size() << std::endl; 
     corners_.clear();
+    std::vector<cv::Point3f> object_points;
 
     // Covnert to zarray
     // TODO: Avoid hard copy
@@ -163,81 +188,89 @@ public:
  //   if (zarray_size(detections) == 0)
  //     image_u8_write_pnm(img, "/data/tmp.pnm");
 
+    ROS_INFO("# of detection = %d", zarray_size(detections));
     for (int i = 0; i < zarray_size(detections); i++) {
       apriltag_detection_t *det;
       zarray_get(detections, i, &det);
 
-      printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
+//      printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
       
-      // ID 0 is used here
-      if (det->id == 0)
+      // ID 0,1 is used here
+      if (det->id == 0 || det->id == 1 || det->id == 2)
       {
         // Image points
         cv::Point2f offset(roi.x, roi.y);
-        corners_.push_back(cv::Point2f(det->p[0][0], det->p[0][1]) + offset);
-        corners_.push_back(cv::Point2f(det->p[1][0], det->p[1][1]) + offset);
-        corners_.push_back(cv::Point2f(det->p[2][0], det->p[2][1]) + offset);
-        corners_.push_back(cv::Point2f(det->p[3][0], det->p[3][1]) + offset);
-      	// PnP
-        cv::Mat rvec, tvec;
-        //cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
-        //cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.339776, 0.111324, -0.000647, 0.001356, 0.000000);
-        //cv::Mat camera_matrix = model_.fullIntrinsicMatrix();
-        //cv::Mat dist_coeffs = model_.distortionCoeffs();
         
-        cv::solvePnP(object_points_, corners_, model_.fullIntrinsicMatrix(), model_.distortionCoeffs(), rvec, tvec);
-        // Convert to cam to world
-        cv::Mat R;
-        cv::Rodrigues(rvec, R);
-        R = R.t();
-        tvec = -R * tvec;
-
-	      // Convert to Eigen
-        Eigen::Vector3d translation;
-        Eigen::Matrix3d rotation;
-        
-        translation << tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2);
-        rotation << R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2), 
-                    R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2), 
-                    R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2);
-        Eigen::Quaterniond q(rotation);
-        
-        // Wrap as tf2
-        geometry_msgs::TransformStamped transformStamped;
-  
-        transformStamped.header.stamp = msg->header.stamp;  // Use image stamp
-        transformStamped.header.frame_id = "marker_origin";
-        transformStamped.child_frame_id = "camera";
-        
-        transformStamped.transform.translation.x = translation.x();
-        transformStamped.transform.translation.y = translation.y();
-        transformStamped.transform.translation.z = translation.z();
-
-        transformStamped.transform.rotation.x = q.x();
-        transformStamped.transform.rotation.y = q.y();
-        transformStamped.transform.rotation.z = q.z();
-        transformStamped.transform.rotation.w = q.w();
-
-        br.sendTransform(transformStamped);
-      
-//        ROS_INFO("%f, %f, %f", translation.x(), translation.y(), translation.z());
+        for (int j = 0; j < 4; ++j)
+        {
+          corners_.push_back(cv::Point2f(det->p[j][0], det->p[j][1]) + offset);
+          object_points.push_back(object_points_[det->id * 4 + j]);
+        }
       }
-
+      
       apriltag_detection_destroy(det);
 
     }
     
     zarray_destroy(detections);
     image_u8_destroy(img);
+   
+    if (!corners_.empty())
+    {
+      // PnP
+      cv::Mat rvec, tvec;
+      //cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
+      //cv::Mat dist_coeffs = (cv::Mat_<double>(5, 1) << -0.339776, 0.111324, -0.000647, 0.001356, 0.000000);
+      //cv::Mat camera_matrix = model_.fullIntrinsicMatrix();
+      //cv::Mat dist_coeffs = model_.distortionCoeffs();
     
+      cv::solvePnP(object_points, corners_, model_.fullIntrinsicMatrix(), model_.distortionCoeffs(), rvec, tvec);
+      // Convert to cam to world
+      cv::Mat R;
+      cv::Rodrigues(rvec, R);
+      R = R.t();
+      tvec = -R * tvec;
+
+      // Convert to Eigen
+      Eigen::Vector3d translation;
+      Eigen::Matrix3d rotation;
+    
+      translation << tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2);
+      rotation << R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2), 
+                  R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2), 
+                  R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2);
+      Eigen::Quaterniond q(rotation);
+    
+      // Wrap as tf2
+      geometry_msgs::TransformStamped transformStamped;
+
+      transformStamped.header.stamp = msg->header.stamp;  // Use image stamp
+      transformStamped.header.frame_id = "marker_origin";
+      transformStamped.child_frame_id = "camera";
+    
+      transformStamped.transform.translation.x = translation.x();
+      transformStamped.transform.translation.y = translation.y();
+      transformStamped.transform.translation.z = translation.z();
+
+      transformStamped.transform.rotation.x = q.x();
+      transformStamped.transform.rotation.y = q.y();
+      transformStamped.transform.rotation.z = q.z();
+      transformStamped.transform.rotation.w = q.w();
+
+      br.sendTransform(transformStamped);
+    }
+
     if (vis_)
     {
       cv::cvtColor(img_gray, img_gray, CV_GRAY2BGR);
+      cv::rectangle(img_gray, roi, cv::Scalar(0, 0, 255), 3);
       for (int i = 0; i < corners_.size(); ++i)
       {
-        char buf[100];
-        sprintf(buf, "%d", i);
-        cv::putText(img_gray, std::string(buf), corners_[i], cv::FONT_HERSHEY_PLAIN, 20, cv::Scalar(0, 0, 255));
+      //  char buf[100];
+      //  sprintf(buf, "%d", i);
+      //  cv::putText(img_gray, std::string(buf), corners_[i], cv::FONT_HERSHEY_PLAIN, 20, cv::Scalar(0, 0, 255));
+        cv::circle(img_gray, corners_[i], 10, cv::Scalar(0, 0, 255), 5);
+      
       }
       ROS_INFO("draw.");
       sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img_gray).toImageMsg();
@@ -245,6 +278,9 @@ public:
  //   detect();
  //   pub_->publish(pose_);
     }
+    if (++counter == 30)
+      counter = 0;
+    
   }
 
 //  void publishMessage(ros::Publisher *pub_message)
