@@ -53,7 +53,7 @@ protected:
   std::vector<cv::Point3f> object_points_;
   std::vector<cv::Point2f> corners_;
 
-  float tag_size_;
+  float tag_size_, offset_x_;
   float fx_, fy_, cx_, cy_;
   size_t width_, height_;
 
@@ -63,6 +63,7 @@ protected:
 public:
   LocalizeCamTag() 
   : tag_size_       (0.165)   // Meter
+  , offset_x_       (0.651)
   , fx_             (978.470806)
   , fy_             (981.508278)
   , cx_             (591.695675)
@@ -74,7 +75,13 @@ public:
   , pub_image_      (NULL)
   , td_             (NULL)
   , tf_             (NULL)
-  {
+  { 
+    constructObjectPoints();
+  }
+
+  void constructObjectPoints() {
+    object_points_.clear();
+    
     // id 0
     object_points_.push_back(cv::Point3f(0, 0, 0));
     object_points_.push_back(cv::Point3f(tag_size_, 0, 0));
@@ -82,7 +89,7 @@ public:
     object_points_.push_back(cv::Point3f(0, tag_size_, 0));
 
     // id 1
-    cv::Point3f translation(0.651, 0, 0); // Offset 0.651m in +x
+    cv::Point3f translation(offset_x_, 0, 0); // Offset 0.651m in +x
     object_points_.push_back(object_points_[0] + translation);
     object_points_.push_back(object_points_[1] + translation);
     object_points_.push_back(object_points_[2] + translation);
@@ -90,7 +97,7 @@ public:
 
 
     // id 2
-    translation = cv::Point3f(0.651 * 2, 0, 0); // Offset 2x2x0.651m in +x
+    translation = cv::Point3f(offset_x_ * 2, 0, 0); // Offset 2x2x0.651m in +x
     object_points_.push_back(object_points_[0] + translation);
     object_points_.push_back(object_points_[1] + translation);
     object_points_.push_back(object_points_[2] + translation);
@@ -130,6 +137,15 @@ public:
   {
     vis_ = config.vis;
     ROS_INFO(vis_ ? "Visualization On" : "Visualization Off");
+    
+    if (offset_x_ != config.offset_x || tag_size_ != config.tag_size)
+    {
+    
+      offset_x_ = config.offset_x;
+      tag_size_ = config.tag_size;
+      ROS_INFO("Tag size = %f, offset_x = %f", tag_size_, offset_x_);
+      constructObjectPoints();
+    }
   }
 
   void imageCallback(const sensor_msgs::ImageConstPtr &msg,
@@ -188,7 +204,7 @@ public:
  //   if (zarray_size(detections) == 0)
  //     image_u8_write_pnm(img, "/data/tmp.pnm");
 
-    ROS_INFO("# of detection = %d", zarray_size(detections));
+    ROS_INFO_THROTTLE(1.0, "# of detection = %d", zarray_size(detections));
     for (int i = 0; i < zarray_size(detections); i++) {
       apriltag_detection_t *det;
       zarray_get(detections, i, &det);
@@ -272,7 +288,7 @@ public:
         cv::circle(img_gray, corners_[i], 10, cv::Scalar(0, 0, 255), 5);
       
       }
-      ROS_INFO("draw.");
+  
       sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img_gray).toImageMsg();
       pub_image_->publish(msg_tag);
  //   detect();
