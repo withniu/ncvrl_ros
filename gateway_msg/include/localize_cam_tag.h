@@ -278,7 +278,7 @@ public:
  //   detect();
  //   pub_->publish(pose_);
     }
-    if (++counter == 30)
+    if (++counter == 100)
       counter = 0;
     
   }
