@@ -53,7 +53,7 @@ protected:
   std::vector<cv::Point3f> object_points_;
   std::vector<cv::Point2f> corners_;
 
-  float tag_size_, offset_x_;
+  float tag_size_, offset_x_, offset_y_;
   float fx_, fy_, cx_, cy_;
   size_t width_, height_;
 
@@ -64,6 +64,7 @@ public:
   LocalizeCamTag() 
   : tag_size_       (0.165)   // Meter
   , offset_x_       (0.651)
+  , offset_y_       (0.367)
   , fx_             (978.470806)
   , fy_             (981.508278)
   , cx_             (591.695675)
@@ -81,27 +82,18 @@ public:
 
   void constructObjectPoints() {
     object_points_.clear();
-    
-    // id 0
-    object_points_.push_back(cv::Point3f(0, 0, 0));
-    object_points_.push_back(cv::Point3f(tag_size_, 0, 0));
-    object_points_.push_back(cv::Point3f(tag_size_, tag_size_, 0));
-    object_points_.push_back(cv::Point3f(0, tag_size_, 0));
 
-    // id 1
-    cv::Point3f translation(offset_x_, 0, 0); // Offset 0.651m in +x
-    object_points_.push_back(object_points_[0] + translation);
-    object_points_.push_back(object_points_[1] + translation);
-    object_points_.push_back(object_points_[2] + translation);
-    object_points_.push_back(object_points_[3] + translation);
-
-
-    // id 2
-    translation = cv::Point3f(offset_x_ * 2, 0, 0); // Offset 2x2x0.651m in +x
-    object_points_.push_back(object_points_[0] + translation);
-    object_points_.push_back(object_points_[1] + translation);
-    object_points_.push_back(object_points_[2] + translation);
-    object_points_.push_back(object_points_[3] + translation);
+    cv::Point3f translation;    
+    for (int r = 0; r < 3; ++r)
+      for (int c = 0; c < 3; ++c)
+      {
+        translation = cv::Point3f(offset_x_ * c, offset_y_ * r, 0); // Offset 2x2x0.651m in +x
+      
+        object_points_.push_back(cv::Point3f(0, 0, 0) + translation);
+        object_points_.push_back(cv::Point3f(tag_size_, 0, 0) + translation);
+        object_points_.push_back(cv::Point3f(tag_size_, tag_size_, 0) + translation);
+        object_points_.push_back(cv::Point3f(0, tag_size_, 0) + translation);
+      }
   }
   
   
@@ -133,17 +125,20 @@ public:
     pub_ = pub;
     pub_image_ = pub_image;
   }
+
+
   void configCallback(gateway_msg::LocalizeCamTagConfig &config, uint32_t level) 
   {
     vis_ = config.vis;
     ROS_INFO(vis_ ? "Visualization On" : "Visualization Off");
     
-    if (offset_x_ != config.offset_x || tag_size_ != config.tag_size)
+    // Change tag size or offset if necessary
+    if (offset_x_ != config.offset_x || offset_y_ != config.offset_y || tag_size_ != config.tag_size)
     {
-    
       offset_x_ = config.offset_x;
+      offset_y_ = config.offset_y;
       tag_size_ = config.tag_size;
-      ROS_INFO("Tag size = %f, offset_x = %f", tag_size_, offset_x_);
+      ROS_INFO("Tag size = %f, offset_x = %f, offset_y = %f", tag_size_, offset_x_, offset_y_);
       constructObjectPoints();
     }
   }
@@ -159,77 +154,66 @@ public:
     // tf2 broadcaster
     static tf2_ros::TransformBroadcaster br;
     // Covert over cv_bridge
-    cv::Mat img_gray, img_roi;    
+    cv::Mat img_gray, img_roi, img_tag;    
     cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
     cv::cvtColor(img_ptr->image, img_gray, CV_BGR2GRAY);
    
+
+    if (vis_)
+    {
+      cv::cvtColor(img_gray, img_tag, CV_GRAY2BGR);
+    }
     int width = img_gray.cols;
     int height = img_gray.rows;
     cv::Rect roi(0, 0, width, height);
-    if (!corners_.empty() && counter != 0)
-    {
-      const int b = 50;
-      roi = cv::boundingRect(corners_) - cv::Point(b, b) + cv::Size(2 * b, 2 * b);
-      // Bound in the image 
-      cv::Point tl = roi.tl();
-      cv::Point br = roi.br();
-      tl.x = tl.x < 0 ? 0 : tl.x;
-      tl.y = tl.y < 0 ? 0 : tl.y;
-      br.x = br.x > width ? width : br.x;
-      br.y = br.y > height ? height : br.y;
 
-      roi = cv::Rect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
-      img_roi = img_gray(roi);
+    std::vector<cv::Point2f> corners_last = corners_;
+    corners_.clear();
+    std::vector<cv::Point3f> object_points;
+    
+    if (!corners_last.empty() && counter != 0)
+    {
+      
+      const int b = 50;
+      int num_roi = corners_last.size() / 4;
+      for (int k = 0; k < num_roi; ++k)
+      {
+        std::vector<cv::Point2f> corners(4);
+        for (int kk = 0; kk < 4; ++kk)
+        {
+          corners[kk] = corners_[4 * k + kk];
+        } 
+        roi = cv::boundingRect(corners) - cv::Point(b, b) + cv::Size(2 * b, 2 * b);
+        // Bound in the image 
+        cv::Point tl = roi.tl();
+        cv::Point br = roi.br();
+        tl.x = tl.x < 0 ? 0 : tl.x;
+        tl.y = tl.y < 0 ? 0 : tl.y;
+        br.x = br.x > width ? width : br.x;
+        br.y = br.y > height ? height : br.y;
+
+        roi = cv::Rect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+        img_roi = img_gray(roi);
+        if (vis_)
+        {
+          cv::rectangle(img_tag, roi, cv::Scalar(0, 0, 255), 3);
+        }
+        getCorrespondence(object_points, corners_, img_roi, roi);
+      }  
+      
     }
     else
     {
       img_roi = img_gray;
+      if (vis_)
+      {
+        cv::rectangle(img_tag, roi, cv::Scalar(0, 0, 255), 3);
+      }
+      getCorrespondence(object_points, corners_, img_roi, roi);
     }
 
     //std::cout << roi << img_roi.size() << std::endl; 
-    corners_.clear();
-    std::vector<cv::Point3f> object_points;
 
-    // Covnert to zarray
-    // TODO: Avoid hard copy
-    image_u8_t *img = image_u8_create(img_roi.cols, img_roi.rows);
-    for (int y = 0; y < img->height; ++y)
-    {   
-      memcpy(&img->buf[y * img->stride], img_roi.ptr(y), sizeof(char) * img->width);
-    }
-
-    // Tag detection
-    zarray_t *detections = apriltag_detector_detect(td_, img);
-
- //   if (zarray_size(detections) == 0)
- //     image_u8_write_pnm(img, "/data/tmp.pnm");
-
-    ROS_INFO_THROTTLE(1.0, "# of detection = %d", zarray_size(detections));
-    for (int i = 0; i < zarray_size(detections); i++) {
-      apriltag_detection_t *det;
-      zarray_get(detections, i, &det);
-
-//      printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
-      
-      // ID 0,1 is used here
-      if (det->id == 0 || det->id == 1 || det->id == 2)
-      {
-        // Image points
-        cv::Point2f offset(roi.x, roi.y);
-        
-        for (int j = 0; j < 4; ++j)
-        {
-          corners_.push_back(cv::Point2f(det->p[j][0], det->p[j][1]) + offset);
-          object_points.push_back(object_points_[det->id * 4 + j]);
-        }
-      }
-      
-      apriltag_detection_destroy(det);
-
-    }
-    
-    zarray_destroy(detections);
-    image_u8_destroy(img);
    
     if (!corners_.empty())
     {
@@ -278,18 +262,15 @@ public:
 
     if (vis_)
     {
-      cv::cvtColor(img_gray, img_gray, CV_GRAY2BGR);
-      cv::rectangle(img_gray, roi, cv::Scalar(0, 0, 255), 3);
       for (int i = 0; i < corners_.size(); ++i)
       {
       //  char buf[100];
       //  sprintf(buf, "%d", i);
       //  cv::putText(img_gray, std::string(buf), corners_[i], cv::FONT_HERSHEY_PLAIN, 20, cv::Scalar(0, 0, 255));
-        cv::circle(img_gray, corners_[i], 10, cv::Scalar(0, 0, 255), 5);
-      
+        cv::circle(img_tag, corners_[i], 10, cv::Scalar(0, 0, 255), 5);
       }
   
-      sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img_gray).toImageMsg();
+      sensor_msgs::ImagePtr msg_tag = cv_bridge::CvImage(msg->header, "bgr8", img_tag).toImageMsg();
       pub_image_->publish(msg_tag);
  //   detect();
  //   pub_->publish(pose_);
@@ -297,6 +278,54 @@ public:
     if (++counter == 100)
       counter = 0;
     
+  }
+
+  void getCorrespondence(std::vector<cv::Point3f> &object_points, 
+                         std::vector<cv::Point2f> &corners, 
+                         const cv::Mat img_roi, 
+                         const cv::Rect roi)
+  {
+
+    // Covnert to zarray
+    // TODO: Avoid hard copy
+    image_u8_t *img = image_u8_create(img_roi.cols, img_roi.rows);
+    for (int y = 0; y < img->height; ++y)
+    {   
+      memcpy(&img->buf[y * img->stride], img_roi.ptr(y), sizeof(char) * img->width);
+    }
+
+    // Tag detection
+    zarray_t *detections = apriltag_detector_detect(td_, img);
+
+ //   if (zarray_size(detections) == 0)
+ //     image_u8_write_pnm(img, "/data/tmp.pnm");
+
+    ROS_INFO_THROTTLE(1.0, "# of detection = %d", zarray_size(detections));
+    for (int i = 0; i < zarray_size(detections); i++) {
+      apriltag_detection_t *det;
+      zarray_get(detections, i, &det);
+
+//      printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, goodness %8.3f, margin %8.3f\n", i, det->family->d*det->family->d, det->family->h, det->id, det->hamming, det->goodness, det->decision_margin);
+      
+      // ID 0,1 is used here
+      if (det->id >= 0 && det->id < 9)
+      {
+        // Image points
+        cv::Point2f offset(roi.x, roi.y);
+        
+        for (int j = 0; j < 4; ++j)
+        {
+          corners.push_back(cv::Point2f(det->p[j][0], det->p[j][1]) + offset);
+          object_points.push_back(object_points_[det->id * 4 + j]);
+        }
+      }
+      
+      apriltag_detection_destroy(det);
+
+    }
+    
+    zarray_destroy(detections);
+    image_u8_destroy(img);
   }
 
 //  void publishMessage(ros::Publisher *pub_message)
