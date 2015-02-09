@@ -139,7 +139,7 @@ add_dependencies(localize_cam_tag_node ${PROJECT_NAME}_gencfg)
 
 ## Specify libraries to link a library or executable target against
 #link_directories(/home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib)
-link_directories(/home/nstiurca/catkin_ws/src/ncvrl_ros/gateway_msg/lib)
+link_directories(${CMAKE_SOURCE_DIR}/ncvrl_ros/gateway_msg/lib)
 #add_library(${CMAKE_SOURCE_DIR}/libapriltag.a STATIC IMPORTED)
 target_link_libraries(ptam_metric_node
    ${catkin_LIBRARIES}
@@ -153,7 +153,7 @@ target_link_libraries(localize_cam_tag_node
    ${catkin_LIBRARIES}
    ${OpenCV_LIBS}
 #   /home/withniu/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libapriltag.a
-   /home/nstiurca/catkin_ws/src/ncvrl_ros/gateway_msg/lib/libapriltag.a
+   ${CMAKE_SOURCE_DIR}/ncvrl_ros/gateway_msg/lib/libapriltag.a
    )
 
  #target_link_libraries(localize_cam_node
