@@ -8,7 +8,7 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/String.h>
-//#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <image_geometry/pinhole_camera_model.h>
 
@@ -25,6 +25,10 @@
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2/transform_datatypes.h>
+#include <tf/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>
 
 #include <gateway_msg/LocalizeCamTagConfig.h>
@@ -153,6 +157,9 @@ public:
 
     // tf2 broadcaster
     static tf2_ros::TransformBroadcaster br;
+
+    static tf::TransformListener listener;
+
     // Covert over cv_bridge
     cv::Mat img_gray, img_roi, img_tag;    
     cv_bridge::CvImageConstPtr img_ptr = cv_bridge::toCvShare(msg, "bgr8");
@@ -258,6 +265,45 @@ public:
       transformStamped.transform.rotation.w = q.w();
 
       br.sendTransform(transformStamped);
+
+
+      // PoseWithCovarianceStamped
+      //tf2_ros::Buffer tfBuffer;
+      //tf2_ros::TransformListener tfListener(tfBuffer);
+
+      geometry_msgs::PoseStamped ps;
+
+      ps.header.frame_id = "marker_origin";
+
+      ps.pose.position.x = translation.x();
+      ps.pose.position.y = translation.y();
+      ps.pose.position.z = translation.z();
+      
+      ps.pose.orientation.x = q.x();
+      ps.pose.orientation.y = q.y();
+      ps.pose.orientation.z = q.z();
+      ps.pose.orientation.w = q.w();
+
+      try
+      {
+        listener.transformPose("local_origin", ps, ps);
+      }
+      catch (tf2::TransformException &ex) 
+      {
+        ROS_WARN("%s",ex.what());
+        ros::Duration(1.0).sleep();
+      }
+ 
+      geometry_msgs::PoseWithCovarianceStamped pswc;
+      pswc.header.stamp = msg->header.stamp;
+      pswc.header.frame_id = "world";
+      pswc.pose.pose = ps.pose;
+      // TODO: covarince
+
+ 
+
+      pub_->publish(pswc);
+
     }
 
     if (vis_)

@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber sub_cmd = n.subscribe("cmd", 1, &LocalizeCamTag::cmdCallback, node);
 //  ros::Subscriber sub_pose = n.subscribe("pose", 1, &LocalizeTag::poseCallback, node);
-  ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseStamped>("pose_tag", 1);
+  ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseWithCovarianceStamped>("/camera/pose", 1);
   
   node->registerPublisher(&pub_pose, &pub_img);
   dynamic_reconfigure::Server<gateway_msg::LocalizeCamTagConfig> server;
