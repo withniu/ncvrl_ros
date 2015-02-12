@@ -14,12 +14,12 @@ def handle_pose_sfm(msg):
     br.sendTransform((position.x, position.y, position.z),
                      (orientation.x, orientation.y, orientation.z, orientation.w),
                      rospy.Time.now(),
-                     "cam_sfm",
+                     "camsfm",
                      "world")
 
 if __name__ == '__main__':
     rospy.init_node('sfm_tf_broadcaster')
-    rospy.Subscriber('/pose_sfm',
+    rospy.Subscriber('/input',
                      PoseStamped,
                      handle_pose_sfm)
     rospy.spin()
